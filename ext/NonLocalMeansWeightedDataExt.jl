@@ -1,5 +1,5 @@
 module NonLocalMeansWeightedDataExt
-import NonlocalMeans: nonlocalmeans, nonlocalmeans!
+import NonLocalMeans: nonlocalmeans, nonlocalmeans!
 import WeightedData: WeightedArray, get_value, get_precision
 
 

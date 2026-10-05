@@ -1,4 +1,4 @@
-module NonlocalMeans
+module NonLocalMeans
 
 export nonlocalmeans, nonlocalmeans!
 

@@ -1,6 +1,6 @@
 # API reference
 
 ```@autodocs
-Modules = [NonlocalMeans]
+Modules = [NonLocalMeans]
 Order = [:function]
 ```

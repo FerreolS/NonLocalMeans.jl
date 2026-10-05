@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - master
-    tags: [ "*" ]
+    tags: ["*"]
   pull_request:
   workflow_dispatch:
 concurrency:
@@ -44,7 +44,7 @@ jobs:
       - uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          slug: FerreolS/NonlocalMeans.jl
+          slug: FerreolS/NonLocalMeans.jl
   Aqua:
     name: Aqua tests
     runs-on: ubuntu-latest
@@ -59,8 +59,8 @@ jobs:
           version: "1"
       - uses: julia-actions/cache@v3
       - run: julia --project=test --color=yes -e 'using Pkg; Pkg.develop(path=".")'
-      - run: julia --project=test --color=yes -e 'using Aqua, NonlocalMeans;
-          Aqua.test_all(NonlocalMeans)'
+      - run: julia --project=test --color=yes -e 'using Aqua, NonLocalMeans;
+          Aqua.test_all(NonLocalMeans)'
   ExplicitImports:
     name: ExplicitImports checks
     runs-on: ubuntu-latest
@@ -74,13 +74,14 @@ jobs:
           version: "1"
       - uses: julia-actions/cache@v3
       - run: julia --project=test --color=yes -e 'using Pkg; Pkg.develop(path=".")'
-      - run: julia --project=test --color=yes -e 'using ExplicitImports, NonlocalMeans;
-          ExplicitImports.check_no_implicit_imports(NonlocalMeans);
-          ExplicitImports.check_no_stale_explicit_imports(NonlocalMeans);
+      - run:
+          julia --project=test --color=yes -e 'using ExplicitImports, NonLocalMeans;
+          ExplicitImports.check_no_implicit_imports(NonLocalMeans);
+          ExplicitImports.check_no_stale_explicit_imports(NonLocalMeans);
           extfiles = filter(f -> endswith(f, ".jl"), readdir("ext"; join =
           true)); for f in extfiles;
-          ExplicitImports.check_no_implicit_imports(NonlocalMeans, f);
-          ExplicitImports.check_no_stale_explicit_imports(NonlocalMeans, f); end'
+          ExplicitImports.check_no_implicit_imports(NonLocalMeans, f);
+          ExplicitImports.check_no_stale_explicit_imports(NonLocalMeans, f); end'
   docs:
     name: Documentation
     runs-on: ubuntu-latest
@@ -99,7 +100,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
   dependabot:
-    needs: [ test, Aqua ]
+    needs: [test, Aqua]
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write

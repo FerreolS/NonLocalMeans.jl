@@ -1,6 +1,6 @@
 module NonLocalMeansColorTypesExt
 
-import NonlocalMeans: nonlocalmeans
+import NonLocalMeans: nonlocalmeans
 using ColorTypes: Colorant, base_colorant_type
 
 # (channels, spatial...) float array and the colorant type to convert back to

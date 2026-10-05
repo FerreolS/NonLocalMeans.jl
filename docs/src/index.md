@@ -1,6 +1,6 @@
-# NonlocalMeans.jl
+# NonLocalMeans.jl
 
-NonlocalMeans.jl provides N-dimensional non-local means denoising for
+NonLocalMeans.jl provides N-dimensional non-local means denoising for
 real-valued arrays, with optional joint denoising across channels.
 
 ```@docs
@@ -11,7 +11,7 @@ nonlocalmeans!
 ## Basic usage
 
 ```julia
-using NonlocalMeans
+using NonLocalMeans
 
 output, _ = nonlocalmeans(image; patch_radius = 2, search_radius = 7, h = 1)
 ```

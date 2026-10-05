@@ -3,11 +3,11 @@ using Pkg
 Pkg.develop(PackageSpec(path = dirname(@__DIR__)))
 
 using Documenter
-using NonlocalMeans
+using NonLocalMeans
 
 makedocs(
-    modules = [NonlocalMeans],
-    sitename = "NonlocalMeans.jl",
+    modules = [NonLocalMeans],
+    sitename = "NonLocalMeans.jl",
     pages = [
         "Home" => "index.md",
         "API" => "api.md",
@@ -15,6 +15,6 @@ makedocs(
 )
 
 deploydocs(
-    repo = "github.com/FerreolS/NonlocalMeans.jl.git",
+    repo = "github.com/FerreolS/NonLocalMeans.jl.git",
     devbranch = "master",
 )

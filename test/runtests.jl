@@ -1,4 +1,4 @@
-using NonlocalMeans
+using NonLocalMeans
 using ColorTypes
 using WeightedData
 import WeightedData: get_value, get_precision
