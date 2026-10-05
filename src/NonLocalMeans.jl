@@ -9,7 +9,7 @@ using KernelAbstractions: @index, @kernel
 include("multichannel.jl")
 """
     nonlocalmeans(value, precision = ones; patch_radius=2, search_radius=7, h=1,
-              skip_zero_offset=true, store_precision=false)
+              skip_zero_offset=false, store_precision=false)
 
 Non-local means denoising of an N-dimensional array using KernelAbstractions.
 `patch_radius` and `search_radius` are radii: an integer (same in every
