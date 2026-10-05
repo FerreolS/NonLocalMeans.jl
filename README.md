@@ -1,5 +1,7 @@
 # NonlocalMeans.jl
 
+[![License][license-img]][license-url] [![Build Status][github-ci-img]][github-ci-url] [![Coverage][codecov-img]][codecov-url] [![Aqua QA][aqua-img]][aqua-url] [![Docs][docs-img]][docs-url]
+
 `NonlocalMeans.jl` is a Julia package for non-local means denoising of
 real-valued arrays of any dimensionality, implemented with
 [KernelAbstractions.jl](https://github.com/JuliaGPU/KernelAbstractions.jl).
@@ -34,14 +36,15 @@ Colorant arrays are supported through the optional ColorTypes extension.
 WeightedArray values from WeightedData can be passed directly; their precision
 is used for denoising and returned with the result.
 
-The original serial implementation remains as the non-exported
-`NonlocalMeans.NLmeans`, used as a reference in the tests.
 
-## Testing
 
-Run the package tests with:
-
-```julia
-using Pkg
-Pkg.test()
-```
+[license-url]: ./LICENSE.md
+[license-img]: http://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat
+[github-ci-img]: https://github.com/FerreolS/NonlocalMeans.jl/actions/workflows/CI.yml/badge.svg?branch=master
+[github-ci-url]: https://github.com/FerreolS/NonlocalMeans.jl/actions/workflows/CI.yml?query=branch%3Amaster
+[codecov-img]: http://codecov.io/github/FerreolS/NonlocalMeans.jl/coverage.svg?branch=master
+[codecov-url]: http://codecov.io/github/FerreolS/NonlocalMeans.jl?branch=master
+[aqua-img]: https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg
+[aqua-url]: https://github.com/JuliaTesting/Aqua.jl
+[docs-img]: https://img.shields.io/badge/docs-dev-blue.svg
+[docs-url]: https://ferreols.github.io/NonlocalMeans.jl/dev/

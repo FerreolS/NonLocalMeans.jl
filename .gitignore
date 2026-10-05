@@ -85,3 +85,4 @@ Manifest.toml
 *.synctex.gz
 *.synctex.gz(busy)
 *.pdfsync
+.claude/freshen-package-status
