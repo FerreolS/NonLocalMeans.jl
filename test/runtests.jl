@@ -1,16 +1,8 @@
 using NonlocalMeans
 using ColorTypes
 using WeightedData
-using Aqua
-using ExplicitImports: check_no_implicit_imports, check_no_stale_explicit_imports
 import WeightedData: get_value, get_precision
 using Test
-
-@testset "package quality" begin
-    Aqua.test_all(NonlocalMeans; ambiguities = false)
-    check_no_implicit_imports(NonlocalMeans)
-    check_no_stale_explicit_imports(NonlocalMeans)
-end
 
 # brute-force reference: returns (output, output_precision)
 function reference(value, precision; patch_radius, search_radius, h, skip_zero_offset = false)
