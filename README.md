@@ -7,24 +7,33 @@ real-valued arrays of any dimensionality, implemented with
 ```julia
 using NonlocalMeans
 
-denoised = NLmeansKA(value, precision; patch_size = 3, search_size = 7, h = 10)
-NLmeansKA!(output, value, precision; patch_size = 3, search_size = 7, h = 10)
+denoised, _ = nonlocalmeans(value; patch_radius = 2, search_radius = 7, h = 1)
+nonlocalmeans!(output, value; patch_radius = 2, search_radius = 7, h = 1)
 ```
 
 Each sample is replaced by a weighted average of the samples in its search
 neighborhood. `precision` is optional and defaults to a uniform array. The
-weights are `exp(-patch_distance / h)`, where the patch distance is a
-precision-weighted mean squared difference between patches.
+functions return `(output, output_precision)`. The second value is `nothing`
+unless `store_precision=true` or an output-precision array is provided to the
+in-place function. The weights are `exp(-patch_distance / h)`, where the patch
+distance is the precision-weighted mean squared difference between patches.
 
-- `patch_size` and `search_size` are nonnegative integer radii.
+- `patch_radius` and `search_radius` are nonnegative integer radii. A tuple or
+  `CartesianIndex` can specify a different radius in each dimension.
 - `h` controls the weight decay.
-- `skip_zero_offset` (default `true`) omits the patch center from the distance.
-- `backend` selects the KernelAbstractions backend; it defaults to the one
-  associated with `value` (regular Julia arrays use the CPU backend).
+- `skip_zero_offset` (default `false`) omits the patch center from the distance.
+- The KernelAbstractions backend is inferred from `value`; regular Julia
+  arrays use the CPU backend.
 
-`NLmeansKA!` writes into `output` and returns it; if `output` aliases an input,
-that input is copied before the kernel is launched. Inputs must use one-based
-indexing.
+`nonlocalmeans!` writes into `output`; if `output` aliases an input, that input
+is copied before the kernel is launched. Inputs must use one-based indexing.
+`nonlocalmeans_multichannel` and `nonlocalmeans_multichannel!` provide joint
+denoising when the first array dimension indexes channels. The `channel_dim`
+keyword offers the same behavior for any dimension.
+
+Colorant arrays are supported through the optional ColorTypes extension.
+WeightedArray values from WeightedData can be passed directly; their precision
+is used for denoising and returned with the result.
 
 The original serial implementation remains as the non-exported
 `NonlocalMeans.NLmeans`, used as a reference in the tests.

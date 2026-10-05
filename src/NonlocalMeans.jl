@@ -3,8 +3,9 @@ module NonlocalMeans
 export nonlocalmeans, nonlocalmeans!
 export nonlocalmeans_multichannel, nonlocalmeans_multichannel!
 
-using StructuredArrays
-using KernelAbstractions
+import StructuredArrays: FastUniformArray
+import KernelAbstractions
+using KernelAbstractions: @index, @kernel
 
 include("multichannel.jl")
 """
@@ -15,6 +16,9 @@ Non-local means denoising of an N-dimensional array using KernelAbstractions.
 `patch_radius` and `search_radius` are radii: an integer (same in every
 dimension) or a `Tuple` of integers, or a `CartesianIndex` with one radius per dimension.
 If `store_precision` is true, the precision of each output sample is stored in a separate array and returned.
+The function returns `(output, output_precision)`, with `output_precision`
+equal to `nothing` unless `store_precision` is true. Inputs must use one-based
+indexing.
 
 If `channel_dim` is an integer, that dimension of `value` indexes channels that
 are denoised jointly (one common set of weights, see
@@ -69,8 +73,8 @@ end
 """
     nonlocalmeans!(output, value, precision = ones; kwargs...)
 
-In-place version of [`nonlocalmeans`](@ref); returns  `output`. Inputs aliasing
-`output` are copied first.
+In-place version of [`nonlocalmeans`](@ref); returns `(output,
+output_precision)`. Inputs aliasing `output` are copied first.
 
 If `output_precision` (an array of the same size as `value`) is given, it is
 filled with the precision of each output sample, `(Σ pⱼwⱼ)² / Σ pⱼwⱼ²`,
@@ -83,9 +87,9 @@ function nonlocalmeans!(
         value::AbstractArray{T, N},
         precision::AbstractArray{T, N} = FastUniformArray{T, N}(one(T), size(value)),
         output_precision = nothing;
-        patch_radius = 3,
+        patch_radius = 2,
         search_radius = 7,
-        h::Real = 10,
+        h::Real = 1,
         skip_zero_offset::Bool = false,
         channel_dim::Union{Nothing, Integer} = nothing,
     ) where {T, N}
@@ -136,7 +140,7 @@ function _as_radius(r::CartesianIndex{N}, ::Val{N}, name) where {N}
     return r
 end
 
-function _as_radius(r::NTuple{N, T}, ::Val{N}, name) where {N, T}
+function _as_radius(r::NTuple{N, <:Integer}, ::Val{N}, name) where {N}
     all(>=(0), Tuple(r)) || throw(ArgumentError("$name must be nonnegative"))
     return r
 end

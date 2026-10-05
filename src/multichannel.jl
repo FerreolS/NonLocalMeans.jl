@@ -37,9 +37,9 @@ function nonlocalmeans_multichannel!(
         value::AbstractArray{T, M},
         precision::AbstractArray{T, M} = FastUniformArray{T, M}(one(T), size(value)),
         output_precision = nothing;
-        patch_radius = 3,
+        patch_radius = 2,
         search_radius = 7,
-        h::Real = 10,
+        h::Real = 1,
         skip_zero_offset::Bool = false,
     ) where {T, M}
     axes(value) == axes(precision) ||
@@ -56,6 +56,8 @@ function nonlocalmeans_multichannel!(
         Base.require_one_based_indexing(output_precision)
         Base.mightalias(output_precision, output) &&
             throw(ArgumentError("output_precision must not alias output"))
+        (Base.mightalias(output_precision, value) || Base.mightalias(output_precision, precision)) &&
+            throw(ArgumentError("output_precision must not alias value or precision"))
     end
     store_precision = output_precision !== nothing
     denominator = store_precision ? output_precision : output
@@ -120,7 +122,7 @@ end
             end
         end
 
-        weight = exp(-distance / distance_weight / h)
+        weight = iszero(distance_weight) ? one(distance_weight) : exp(-distance / distance_weight / h)
         pc = ntuple(c -> @inbounds(precision[c, candidate]), Val(C))
         vc = ntuple(c -> @inbounds(value[c, candidate]), Val(C))
         numerator = map((n, p, v) -> n + p * v * weight, numerator, pc, vc)

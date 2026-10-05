@@ -1,8 +1,16 @@
 using NonlocalMeans
 using ColorTypes
 using WeightedData
+using Aqua
+using ExplicitImports: check_no_implicit_imports, check_no_stale_explicit_imports
 import WeightedData: get_value, get_precision
 using Test
+
+@testset "package quality" begin
+    Aqua.test_all(NonlocalMeans; ambiguities = false)
+    check_no_implicit_imports(NonlocalMeans)
+    check_no_stale_explicit_imports(NonlocalMeans)
+end
 
 # brute-force reference: returns (output, output_precision)
 function reference(value, precision; patch_radius, search_radius, h, skip_zero_offset = false)
@@ -62,11 +70,21 @@ end
             @test actual_precision ≈ expected_precision
         end
     end
+
+    # An empty patch comparison has no evidence of a difference, so it gets
+    # unit weight rather than propagating NaNs.
+    singleton = reshape(Float32[3], 1, 1)
+    @test nonlocalmeans(singleton; patch_radius = 0, search_radius = 0, skip_zero_offset = true)[1] == singleton
 end
 
 @testset "in place and aliasing" begin
     value = rand(Float32, 5, 6)
     precision = rand(Float32, 5, 6) .+ 1
+    default_expected = nonlocalmeans(value, precision)[1]
+    default_output = similar(value)
+    nonlocalmeans!(default_output, value, precision)
+    @test default_output ≈ default_expected
+
     kw = (patch_radius = 1, search_radius = 2, h = 4)
     expected = nonlocalmeans(value, precision; kw...)[1]
 
@@ -101,9 +119,17 @@ end
     nonlocalmeans!(similar(x), x, p, op; patch_radius = 0, search_radius = 1, h = 1.0f12)
     @test op[5, 4] ≈ sum(p[4:6, 3:5]) rtol = 1.0e-4
     @test_throws ArgumentError nonlocalmeans!(x, x, p, x)
+    @test_throws ArgumentError nonlocalmeans!(similar(x), x, p, x; patch_radius = 1)
 end
 
 @testset "multichannel / channel_dim" begin
+    default_value = reshape(Float32.(1:90) .^ 1.2f0, 3, 5, 6)
+    default_precision = reshape(Float32.(1:90) ./ 90 .+ 1, 3, 5, 6)
+    default_expected = nonlocalmeans_multichannel(default_value, default_precision)[1]
+    default_output = similar(default_value)
+    nonlocalmeans_multichannel!(default_output, default_value, default_precision)
+    @test default_output ≈ default_expected
+
     kw = (patch_radius = 1, search_radius = 2, h = 0.5f0)
     x = rand(Float32, 3, 9, 8)
     P = rand(Float32, 3, 9, 8) .+ 1
