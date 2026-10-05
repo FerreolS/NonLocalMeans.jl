@@ -123,23 +123,27 @@ end
 end
 
 @testset "multichannel / channel_dim" begin
+
     default_value = reshape(Float32.(1:90) .^ 1.2f0, 3, 5, 6)
     default_precision = reshape(Float32.(1:90) ./ 90 .+ 1, 3, 5, 6)
-    default_expected = nonlocalmeans_multichannel(default_value, default_precision)[1]
+    default_expected = nonlocalmeans(default_value, default_precision; channel_dim = 1)[1]
     default_output = similar(default_value)
-    nonlocalmeans_multichannel!(default_output, default_value, default_precision)
+    nonlocalmeans!(default_output, default_value, default_precision; channel_dim = 1)
     @test default_output ≈ default_expected
 
     kw = (patch_radius = 1, search_radius = 2, h = 0.5f0)
     x = rand(Float32, 3, 9, 8)
     P = rand(Float32, 3, 9, 8) .+ 1
-    ref, refp = nonlocalmeans_multichannel(x, P; store_precision = true, kw...)
+    ref, refp = nonlocalmeans(x, P; channel_dim = 1, store_precision = true, kw...)
 
     # one channel equals the plain function
     v = rand(Float32, 9, 8)
     q = rand(Float32, 9, 8) .+ 1
     a, ap = nonlocalmeans(v, q; store_precision = true, kw...)
-    b, bp = nonlocalmeans_multichannel(reshape(v, 1, 9, 8), reshape(q, 1, 9, 8); store_precision = true, kw...)
+    b, bp = nonlocalmeans(
+        reshape(v, 1, 9, 8), reshape(q, 1, 9, 8);
+        channel_dim = 1, store_precision = true, kw...,
+    )
     @test b[1, :, :] ≈ a && bp[1, :, :] ≈ ap
 
     # channels share one weight, so differ from independent denoising

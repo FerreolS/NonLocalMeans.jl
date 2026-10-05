@@ -1,6 +1,6 @@
 module NonLocalMeansColorTypesExt
 
-import NonlocalMeans: nonlocalmeans, nonlocalmeans_multichannel
+import NonlocalMeans: nonlocalmeans
 using ColorTypes: Colorant, base_colorant_type
 
 # (channels, spatial...) float array and the colorant type to convert back to
@@ -20,11 +20,11 @@ end
     nonlocalmeans(img::AbstractArray{<:Colorant}; kwargs...)
 
 Denoise a color image (e.g. `Array{RGB{Float32},2}`). The color channels are
-denoised jointly (see [`nonlocalmeans_multichannel`](@ref)). Returns `output`.
+denoised jointly using `channel_dim=1`. Returns `output`.
 """
 function nonlocalmeans(img::AbstractArray{C, N}; kwargs...) where {C <: Colorant, N}
     data, T = _to_channels(img)
-    out, _ = nonlocalmeans_multichannel(data; kwargs...)
+    out, _ = nonlocalmeans(data; channel_dim = 1, kwargs...)
     return _to_colors(out, C, T)
 end
 

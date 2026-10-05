@@ -1,6 +1,6 @@
 name = "NonlocalMeans"
 uuid = "162c676a-a45a-4983-ae92-c657b27fec21"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["ferreol <ferreol.soulez@free.fr>"]
 
 [deps]

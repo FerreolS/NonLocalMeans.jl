@@ -1,7 +1,6 @@
 module NonlocalMeans
 
 export nonlocalmeans, nonlocalmeans!
-export nonlocalmeans_multichannel, nonlocalmeans_multichannel!
 
 import StructuredArrays: FastUniformArray
 import KernelAbstractions
@@ -22,7 +21,7 @@ indexing.
 
 If `channel_dim` is an integer, that dimension of `value` indexes channels that
 are denoised jointly (one common set of weights, see
-[`nonlocalmeans_multichannel`](@ref)); patches and search windows then span the
+joint-channel denoising); patches and search windows then span the
 remaining dimensions only. `precision` and the returned precision always have the
 same size as `value` (one precision per channel and pixel). With `channel_dim = nothing` (default) all dimensions are
 spatial.
@@ -37,18 +36,6 @@ function nonlocalmeans(
         store_precision = false,
         channel_dim::Union{Nothing, Integer} = nothing,
     ) where {T, N}
-    if channel_dim !== nothing
-        axes(precision) == axes(value) ||
-            throw(DimensionMismatch("value and precision must have the same axes"))
-        perm = _channel_permutation(channel_dim, Val(N))
-        out, out_precision = nonlocalmeans_multichannel(
-            permutedims(value, perm),
-            permutedims(precision, perm);
-            patch_radius, search_radius, h, skip_zero_offset, store_precision,
-        )
-        return permutedims(out, invperm(perm)),
-            out_precision === nothing ? nothing : permutedims(out_precision, invperm(perm))
-    end
     output = similar(value)
     output_precision = store_precision ? similar(value) : nothing
 
@@ -61,6 +48,7 @@ function nonlocalmeans(
         search_radius,
         h,
         skip_zero_offset,
+        channel_dim,
     )
 end
 
@@ -102,7 +90,7 @@ function nonlocalmeans!(
         permuted_output = permutedims(output, perm)
         permuted_precision = permutedims(precision, perm)
         permuted_op = output_precision === nothing ? nothing : permutedims(output_precision, perm)
-        nonlocalmeans_multichannel!(
+        _nonlocalmeans!(
             permuted_output, permutedims(value, perm), permuted_precision, permuted_op;
             patch_radius, search_radius, h, skip_zero_offset,
         )
@@ -122,7 +110,7 @@ function nonlocalmeans!(
     end
     # a single channel: add a leading dimension of size one
     lift(a) = reshape(a, 1, size(a)...)
-    nonlocalmeans_multichannel!(
+    _nonlocalmeans!(
         lift(output), lift(value), lift(precision),
         output_precision === nothing ? nothing : lift(output_precision);
         patch_radius, search_radius, h, skip_zero_offset,

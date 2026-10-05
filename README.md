@@ -27,9 +27,8 @@ distance is the precision-weighted mean squared difference between patches.
 
 `nonlocalmeans!` writes into `output`; if `output` aliases an input, that input
 is copied before the kernel is launched. Inputs must use one-based indexing.
-`nonlocalmeans_multichannel` and `nonlocalmeans_multichannel!` provide joint
-denoising when the first array dimension indexes channels. The `channel_dim`
-keyword offers the same behavior for any dimension.
+Set `channel_dim` to the channel axis to denoise channels jointly; patches and
+search windows span the remaining dimensions.
 
 Colorant arrays are supported through the optional ColorTypes extension.
 WeightedArray values from WeightedData can be passed directly; their precision

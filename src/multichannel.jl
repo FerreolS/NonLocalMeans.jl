@@ -1,38 +1,4 @@
-"""
-    nonlocalmeans_multichannel(value, precision = ones; kwargs...)
-
-Non-local means of a multichannel array whose **first** dimension indexes the
-channels (`size(value) == (C, spatial...)`). All channels are denoised jointly:
-one weight per pair of pixels is computed from the precision-weighted squared
-differences of all channels, and applied to every channel. `precision` (and the
-stored output precision) has the same size as `value`, i.e. one precision per
-channel and pixel. Keywords are those of [`nonlocalmeans`](@ref). Returns
-`(output, output_precision)`, the latter being `nothing` unless
-`store_precision=true`.
-"""
-function nonlocalmeans_multichannel(
-        value::AbstractArray{T, M},
-        precision::AbstractArray{T, M} = FastUniformArray{T, M}(one(T), size(value));
-        patch_radius = 2,
-        search_radius = 7,
-        h::Real = 1,
-        skip_zero_offset::Bool = false,
-        store_precision = false,
-    ) where {T, M}
-    output_precision = store_precision ? similar(value) : nothing
-    return nonlocalmeans_multichannel!(
-        similar(value), value, precision, output_precision;
-        patch_radius, search_radius, h, skip_zero_offset,
-    )
-end
-
-"""
-    nonlocalmeans_multichannel!(output, value, precision = ones, output_precision = nothing; kwargs...)
-
-In-place version of [`nonlocalmeans_multichannel`](@ref); returns
-`(output, output_precision)`.
-"""
-function nonlocalmeans_multichannel!(
+function _nonlocalmeans!(
         output::AbstractArray{<:Any, M},
         value::AbstractArray{T, M},
         precision::AbstractArray{T, M} = FastUniformArray{T, M}(one(T), size(value)),
@@ -66,7 +32,7 @@ function nonlocalmeans_multichannel!(
     source_precision = Base.mightalias(output, precision) ? copy(precision) : precision
 
     backend = KernelAbstractions.get_backend(value)
-    kernel! = _nlmeans_multichannel_kernel!(backend)
+    kernel! = _nlmeans_kernel!(backend)
     kernel!(
         output, source, source_precision, denominator, store_precision,
         patch_radius, search_radius, skip_zero_offset, T(h), Val(size(value, 1));
@@ -76,7 +42,7 @@ function nonlocalmeans_multichannel!(
     return output, output_precision
 end
 
-@kernel function _nlmeans_multichannel_kernel!(output, value, precision, output_precision, store_precision, patch_radius, search_radius, skip_zero_offset, h, ::Val{C}) where {C}
+@kernel function _nlmeans_kernel!(output, value, precision, output_precision, store_precision, patch_radius, search_radius, skip_zero_offset, h, ::Val{C}) where {C}
     index = @index(Global, Cartesian)
     dims = size(value)[2:end]
     nspatial = length(dims)
