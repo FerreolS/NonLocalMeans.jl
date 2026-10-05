@@ -9,12 +9,15 @@ OhMyThreads = "67456a42-1dca-4109-a031-0a68de7e3ad5"
 StructuredArrays = "2e8cd123-6858-488d-b42d-068777248635"
 
 [weakdeps]
+ColorTypes = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
 WeightedData = "198d7fc6-4dbd-4d01-be45-be9677e11b0d"
 
 [extensions]
-NonLocalMeansWeightedDataExt =  ["WeightedData"]
+NonLocalMeansColorTypesExt = "ColorTypes"
+NonLocalMeansWeightedDataExt = ["WeightedData"]
 
 [compat]
+ColorTypes = "0.11, 0.12"
 KernelAbstractions = "0.9"
 OhMyThreads = "0.8.7"
 StructuredArrays = "0.2.23"
@@ -22,7 +25,9 @@ WeightedData = "0.3.5"
 julia = "1.10"
 
 [extras]
+ColorTypes = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+WeightedData = "198d7fc6-4dbd-4d01-be45-be9677e11b0d"
 
 [targets]
-test = ["Test"]
+test = ["Test", "ColorTypes", "WeightedData"]

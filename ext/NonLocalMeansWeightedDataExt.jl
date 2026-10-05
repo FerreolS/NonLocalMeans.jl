@@ -1,10 +1,13 @@
 module NonLocalMeansWeightedDataExt
-import NonlocalMeans: nonlocalmeans
+import NonlocalMeans: nonlocalmeans, nonlocalmeans!
 import WeightedData: WeightedArray, get_value, get_precision
 
 
 function nonlocalmeans(value::WeightedArray; kwargs...)
-    return nonlocalmeans(get_value(value), get_precision(value); kwargs...)
+    out, out_precision = nonlocalmeans(
+        get_value(value), get_precision(value); kwargs..., store_precision = true,
+    )
+    return WeightedArray(out, out_precision)
 end
 
 function nonlocalmeans!(output::WeightedArray, value::WeightedArray; kwargs...)

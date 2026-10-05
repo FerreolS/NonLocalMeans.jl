@@ -1,10 +1,12 @@
 module NonlocalMeans
 
 export nonlocalmeans, nonlocalmeans!
+export nonlocalmeans_multichannel, nonlocalmeans_multichannel!
 
 using StructuredArrays
 using KernelAbstractions
 
+include("multichannel.jl")
 """
     nonlocalmeans(value, precision = ones; patch_radius=2, search_radius=7, h=1,
               skip_zero_offset=true, store_precision=false)
@@ -13,6 +15,13 @@ Non-local means denoising of an N-dimensional array using KernelAbstractions.
 `patch_radius` and `search_radius` are radii: an integer (same in every
 dimension) or a `Tuple` of integers, or a `CartesianIndex` with one radius per dimension.
 If `store_precision` is true, the precision of each output sample is stored in a separate array and returned.
+
+If `channel_dim` is an integer, that dimension of `value` indexes channels that
+are denoised jointly (one common set of weights, see
+[`nonlocalmeans_multichannel`](@ref)); patches and search windows then span the
+remaining dimensions only. `precision` and the returned precision always have the
+same size as `value` (one precision per channel and pixel). With `channel_dim = nothing` (default) all dimensions are
+spatial.
 """
 function nonlocalmeans(
         value::AbstractArray{T, N},
@@ -22,7 +31,20 @@ function nonlocalmeans(
         h::Real = 1,
         skip_zero_offset::Bool = false,
         store_precision = false,
+        channel_dim::Union{Nothing, Integer} = nothing,
     ) where {T, N}
+    if channel_dim !== nothing
+        axes(precision) == axes(value) ||
+            throw(DimensionMismatch("value and precision must have the same axes"))
+        perm = _channel_permutation(channel_dim, Val(N))
+        out, out_precision = nonlocalmeans_multichannel(
+            permutedims(value, perm),
+            permutedims(precision, perm);
+            patch_radius, search_radius, h, skip_zero_offset, store_precision,
+        )
+        return permutedims(out, invperm(perm)),
+            out_precision === nothing ? nothing : permutedims(out_precision, invperm(perm))
+    end
     output = similar(value)
     output_precision = store_precision ? similar(value) : nothing
 
@@ -38,6 +60,12 @@ function nonlocalmeans(
     )
 end
 
+# permutation moving `channel_dim` to the front, keeping the other dims in order
+function _channel_permutation(channel_dim::Integer, ::Val{N}) where {N}
+    1 <= channel_dim <= N || throw(ArgumentError("channel_dim must be between 1 and $N"))
+    return (Int(channel_dim), (d for d in 1:N if d != channel_dim)...)
+end
+
 """
     nonlocalmeans!(output, value, precision = ones; kwargs...)
 
@@ -47,6 +75,8 @@ In-place version of [`nonlocalmeans`](@ref); returns  `output`. Inputs aliasing
 If `output_precision` (an array of the same size as `value`) is given, it is
 filled with the precision of each output sample, `(Σ pⱼwⱼ)² / Σ pⱼwⱼ²`,
 treating the weights as fixed.
+
+`channel_dim` has the same meaning as in [`nonlocalmeans`](@ref).
 """
 function nonlocalmeans!(
         output::AbstractArray{T, N},
@@ -56,44 +86,43 @@ function nonlocalmeans!(
         patch_radius = 3,
         search_radius = 7,
         h::Real = 10,
-        skip_zero_offset::Bool = false
+        skip_zero_offset::Bool = false,
+        channel_dim::Union{Nothing, Integer} = nothing,
     ) where {T, N}
+    if channel_dim !== nothing
+        axes(output) == axes(value) ||
+            throw(DimensionMismatch("output and value must have the same axes"))
+        axes(precision) == axes(value) ||
+            throw(DimensionMismatch("value and precision must have the same axes"))
+        perm = _channel_permutation(channel_dim, Val(N))
+        permuted_output = permutedims(output, perm)
+        permuted_precision = permutedims(precision, perm)
+        permuted_op = output_precision === nothing ? nothing : permutedims(output_precision, perm)
+        nonlocalmeans_multichannel!(
+            permuted_output, permutedims(value, perm), permuted_precision, permuted_op;
+            patch_radius, search_radius, h, skip_zero_offset,
+        )
+        copyto!(output, permutedims(permuted_output, invperm(perm)))
+        permuted_op === nothing || copyto!(output_precision, permutedims(permuted_op, invperm(perm)))
+        return output, output_precision
+    end
     axes(value) == axes(precision) ||
         throw(DimensionMismatch("value and precision must have the same axes"))
     axes(output) == axes(value) ||
         throw(DimensionMismatch("output and value must have the same axes"))
     Base.require_one_based_indexing(output, value, precision)
-    patch_radius = _as_radius(patch_radius, Val(N), "patch_radius")
-    search_radius = _as_radius(search_radius, Val(N), "search_radius")
-
     if output_precision !== nothing
         axes(output_precision) == axes(value) ||
             throw(DimensionMismatch("output_precision and value must have the same axes"))
         Base.require_one_based_indexing(output_precision)
-        Base.mightalias(output_precision, output) &&
-            throw(ArgumentError("output_precision must not alias output"))
     end
-    store_precision = output_precision !== nothing
-    output_precision = store_precision ? output_precision : output
-
-    source = Base.mightalias(output, value) ? copy(value) : value
-    source_precision = Base.mightalias(output, precision) ? copy(precision) : precision
-
-    backend = KernelAbstractions.get_backend(value)
-    kernel! = _nlmeans_kernel!(backend)
-    kernel!(
-        output,
-        source,
-        source_precision,
-        output_precision,
-        store_precision,
-        patch_radius,
-        search_radius,
-        skip_zero_offset,
-        T(h);
-        ndrange = size(source),
+    # a single channel: add a leading dimension of size one
+    lift(a) = reshape(a, 1, size(a)...)
+    nonlocalmeans_multichannel!(
+        lift(output), lift(value), lift(precision),
+        output_precision === nothing ? nothing : lift(output_precision);
+        patch_radius, search_radius, h, skip_zero_offset,
     )
-    KernelAbstractions.synchronize(backend)
     return output, output_precision
 end
 
@@ -116,61 +145,6 @@ end
 _as_radius(r, ::Val, name) =
     throw(ArgumentError("$name must be a nonnegative integer, a tuple of nonnegative integers, or a CartesianIndex of matching dimension"))
 
-@kernel function _nlmeans_kernel!(output, value, precision, output_precision, store_precision, patch_radius, search_radius, skip_zero_offset, h)
-    index = @index(Global, Cartesian)
-    dims = size(value)
-    zero_offset = CartesianIndex(ntuple(_ -> 0, ndims(value)))
-    numerator = zero(eltype(value))
-    denominator = zero(eltype(value))
-    squared_sum = zero(eltype(value))
-
-    search_ranges = ntuple(
-        dimension ->
-        max(1, index[dimension] - search_radius[dimension]):min(dims[dimension], index[dimension] + search_radius[dimension]),
-        ndims(value),
-    )
-    for candidate in CartesianIndices(search_ranges)
-        distance = zero(eltype(value))
-        distance_weight = zero(eltype(value))
-
-        patch_ranges = ntuple(
-            dimension -> max(
-                -patch_radius[dimension],
-                1 - index[dimension],
-                1 - candidate[dimension],
-            ):min(
-                patch_radius[dimension],
-                dims[dimension] - index[dimension],
-                dims[dimension] - candidate[dimension],
-            ),
-            ndims(value),
-        )
-        for offset in CartesianIndices(patch_ranges)
-            skip_zero_offset && offset == zero_offset && continue
-            center_patch = index + offset
-            candidate_patch = candidate + offset
-            p1 = precision[center_patch]
-            p2 = precision[candidate_patch]
-            patch_weight = (p1 * p2) / (p1 + p2)
-            difference = value[center_patch] - value[candidate_patch]
-            distance += difference^2 * patch_weight
-            distance_weight += patch_weight
-        end
-
-        weight = exp(-distance / distance_weight / h)
-        candidate_precision = precision[candidate]
-        numerator += candidate_precision * value[candidate] * weight
-        denominator += candidate_precision * weight
-        squared_sum += candidate_precision * weight^2
-    end
-
-    output[index] = numerator / denominator
-    if store_precision
-        output_precision[index] = denominator^2 / squared_sum
-    end
-end
-
-
 #include("legacy.jl")
 
-end # module NonlocalMeans
+end
