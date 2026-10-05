@@ -1,0 +1,19 @@
+[deps]
+Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+ColorTypes = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
+ExplicitImports = "7d51a73a-1435-4ff3-83d9-f097790105c7"
+NonlocalMeans = "162c676a-a45a-4983-ae92-c657b27fec21"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+WeightedData = "198d7fc6-4dbd-4d01-be45-be9677e11b0d"
+
+[sources]
+NonlocalMeans = {path = ".."}
+
+[compat]
+Aqua = "0.8"
+ColorTypes = "0.11, 0.12"
+ExplicitImports = "1"
+NonlocalMeans = "0.2"
+Test = "1"
+WeightedData = "0.3.5"
+julia = "1.10"
