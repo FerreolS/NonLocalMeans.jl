@@ -1,6 +1,6 @@
 # NonlocalMeans.jl
 
-[![License][license-img]][license-url] [![Build Status][github-ci-img]][github-ci-url] [![Coverage][codecov-img]][codecov-url] [![Aqua QA][aqua-img]][aqua-url] [![Docs][docs-img]][docs-url]
+[![Build Status][github-ci-img]][github-ci-url] [![Coverage][codecov-img]][codecov-url] [![Aqua QA][aqua-img]][aqua-url] [![Docs][docs-img]][docs-url]
 
 `NonlocalMeans.jl` is a Julia package for non-local means denoising of
 real-valued arrays of any dimensionality, implemented with
@@ -37,9 +37,6 @@ WeightedArray values from WeightedData can be passed directly; their precision
 is used for denoising and returned with the result.
 
 
-
-[license-url]: ./LICENSE.md
-[license-img]: http://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat
 [github-ci-img]: https://github.com/FerreolS/NonlocalMeans.jl/actions/workflows/CI.yml/badge.svg?branch=master
 [github-ci-url]: https://github.com/FerreolS/NonlocalMeans.jl/actions/workflows/CI.yml?query=branch%3Amaster
 [codecov-img]: http://codecov.io/github/FerreolS/NonlocalMeans.jl/coverage.svg?branch=master
