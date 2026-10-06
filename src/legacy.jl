@@ -1,4 +1,4 @@
-function NLmeans_legacy(value::AbstractArray{T, N}, precision::AbstractArray{T, N} = FastUniformArray{T, N}(one(T), size(value)); patch_size = 3, search_size = 7, h = 10, skip_zero_offset::Bool = true) where {T, N}
+function NLmeans_legacy(value::AbstractArray{T, N}, precision::AbstractArray{T, N} = FastUniformArray{T, N}(one(T), size(value)); patch_size = 2, search_size = 7, h = 1, skip_zero_offset::Bool = false) where {T, N}
     size(value) == size(precision) || throw(DimensionMismatch("value and precision must have the same size"))
     output = similar(value)
     patch_size isa Int && (patch_size = CartesianIndex(ntuple(_ -> patch_size, N)))
@@ -18,7 +18,7 @@ function NLmeans_legacy(value::AbstractArray{T, N}, precision::AbstractArray{T, 
     return output
 end
 
-function compute_weights(value::AbstractArray{T, N}, precision::AbstractArray{T, N}, center1::CartesianIndex{N}, center2::CartesianIndex{N}, patch_radius::CartesianIndex{N}, h::Real; skip_zero_offset::Bool = true) where {T, N}
+function compute_weights(value::AbstractArray{T, N}, precision::AbstractArray{T, N}, center1::CartesianIndex{N}, center2::CartesianIndex{N}, patch_radius::CartesianIndex{N}, h::Real; skip_zero_offset::Bool = false) where {T, N}
     axes(value) == axes(precision) || throw(DimensionMismatch("value and precision must have the same axes"))
     dist = zero(T)
     weight = zero(T)
@@ -42,5 +42,6 @@ function compute_weights(value::AbstractArray{T, N}, precision::AbstractArray{T,
         card += 1
     end
 
-    return exp(- dist / weight / h) #, weight, card
+    iszero(weight) && return one(T)
+    return exp(- dist / weight / h)
 end

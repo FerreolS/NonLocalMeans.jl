@@ -186,3 +186,20 @@ end
     @test get_value(out) ≈ expected
     @test get_precision(out) ≈ expected_precision
 end
+
+@testset "legacy implementation" begin
+    for dims in ((20,), (9, 8), (6, 5, 4)), skip in (false, true), pr in (0, 1, 2)
+        value = rand(dims...)
+        precision = rand(dims...) .+ 0.5
+        kw = (; h = 0.7, skip_zero_offset = skip)
+        legacy = NonLocalMeans.NLmeans_legacy(value, precision; patch_size = pr, search_size = 3, kw...)
+        new = nonlocalmeans(value, precision; patch_radius = pr, search_radius = 3, kw...)[1]
+        @test new ≈ legacy
+        legacy = NonLocalMeans.NLmeans_legacy(value; patch_size = pr, search_size = 3, kw...)
+        new = nonlocalmeans(value; patch_radius = pr, search_radius = 3, kw...)[1]
+        @test new ≈ legacy
+    end
+    # same defaults
+    value = rand(12, 11)
+    @test nonlocalmeans(value)[1] ≈ NonLocalMeans.NLmeans_legacy(value)
+end
