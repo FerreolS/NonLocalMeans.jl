@@ -101,7 +101,8 @@ end
             for c in channels
                 p1 = @inbounds precision[c, center_patch]
                 p2 = @inbounds precision[c, candidate_patch]
-                patch_weight = (p1 * p2) / (p1 + p2)
+                p1p2 = p1 + p2
+                patch_weight = (p1p2 == 0 ? zero(p1p2) : (p1 * p2) / p1p2)
                 difference = @inbounds value[c, center_patch] - value[c, candidate_patch]
                 distance += difference^2 * patch_weight
                 distance_weight += patch_weight

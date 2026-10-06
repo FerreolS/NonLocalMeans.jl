@@ -36,7 +36,8 @@ function compute_weights(value::AbstractArray{T, N}, precision::AbstractArray{T,
         skip_zero_offset && offset == zeroindex && continue
         i = center1 + offset
         j = center2 + offset
-        w = (precision[i] * precision[j]) / (precision[i] + precision[j])
+        p1p2 = (precision[i] + precision[j])
+        w = p1p2 == 0 ? zero(p1p2) : (precision[i] * precision[j]) / p1p2
         dist += (value[i] - value[j])^2 * w
         weight += w
         card += 1
