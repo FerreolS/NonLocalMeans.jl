@@ -1,3 +1,23 @@
+function _as_radius(r::Integer, ::Val{N}, name) where {N}
+    0 <= r <= typemax(Int) || throw(ArgumentError("$name must be nonnegative"))
+    return CartesianIndex(ntuple(_ -> Int(r), Val(N)))
+end
+
+function _as_radius(r::CartesianIndex{N}, ::Val{N}, name) where {N}
+    all(>=(0), Tuple(r)) || throw(ArgumentError("$name must be nonnegative"))
+    return r
+end
+
+function _as_radius(r::NTuple{N, <:Integer}, ::Val{N}, name) where {N}
+    all(>=(0), Tuple(r)) || throw(ArgumentError("$name must be nonnegative"))
+    return r
+end
+
+
+_as_radius(r, ::Val, name) =
+    throw(ArgumentError("$name must be a nonnegative integer, a tuple of nonnegative integers, or a CartesianIndex of matching dimension"))
+
+
 function _nonlocalmeans!(
         output::AbstractArray{<:Any, M},
         value::AbstractArray{T, M},
