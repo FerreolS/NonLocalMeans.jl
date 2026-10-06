@@ -15,9 +15,11 @@ Non-local means denoising of an N-dimensional array using KernelAbstractions.
 `patch_radius` and `search_radius` are radii: an integer (same in every
 dimension) or a `Tuple` of integers, or a `CartesianIndex` with one radius per dimension.
 If `store_precision` is true, the precision of each output sample is stored in a separate array and returned.
-The function returns `(output, output_precision)`, with `output_precision`
-equal to `nothing` unless `store_precision` is true. Inputs must use one-based
-indexing.
+With an explicit `precision`, the function returns `(output, output_precision)`,
+with `output_precision` equal to `nothing` unless `store_precision` is true.
+Without `precision` (unit precision everywhere) only `output` is returned,
+unless `store_precision` is true, in which case `(output, output_precision)` is
+returned. Inputs must use one-based indexing.
 
 If `channel_dim` is an integer, that dimension of `value` indexes channels that
 are denoised jointly (one common set of weights, see
@@ -28,7 +30,7 @@ spatial.
 """
 function nonlocalmeans(
         value::AbstractArray{T, N},
-        precision::AbstractArray{T, N} = FastUniformArray{T, N}(one(T), size(value));
+        precision::AbstractArray{T, N};
         patch_radius = 2,
         search_radius = 7,
         h::Real = 1,
@@ -50,6 +52,12 @@ function nonlocalmeans(
         skip_zero_offset,
         channel_dim,
     )
+end
+
+function nonlocalmeans(value::AbstractArray{T, N}; store_precision = false, kwargs...) where {T, N}
+    precision = FastUniformArray{T, N}(one(T), size(value))
+    result = nonlocalmeans(value, precision; store_precision, kwargs...)
+    return store_precision ? result : first(result)
 end
 
 # permutation moving `channel_dim` to the front, keeping the other dims in order

@@ -13,7 +13,7 @@ nonlocalmeans!
 ```julia
 using NonLocalMeans
 
-output, _ = nonlocalmeans(image; patch_radius = 2, search_radius = 7, h = 1)
+output = nonlocalmeans(image; patch_radius = 2, search_radius = 7, h = 1)
 ```
 
 Supply a precision array when samples have different confidence values.
@@ -35,7 +35,7 @@ dimensions:
 
 ```julia
 # `image` has dimensions (height, width, channels).
-output, _ = nonlocalmeans(image; channel_dim = 3)
+output = nonlocalmeans(image; channel_dim = 3)
 ```
 
 The same keyword is available on `nonlocalmeans!`. Colorant arrays are also

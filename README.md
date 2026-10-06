@@ -9,7 +9,7 @@ real-valued arrays of any dimensionality, implemented with
 ```julia
 using NonLocalMeans
 
-denoised, _ = nonlocalmeans(value; patch_radius = 2, search_radius = 7, h = 1)
+denoised = nonlocalmeans(value; patch_radius = 2, search_radius = 7, h = 1)
 nonlocalmeans!(output, value; patch_radius = 2, search_radius = 7, h = 1)
 ```
 

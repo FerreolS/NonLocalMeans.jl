@@ -37,12 +37,12 @@ end
 
 @testset "nonlocalmeans" begin
     for image in (fill(2.5, 7), fill(2.5, 5, 6), fill(2.5, 3, 4, 2))
-        @test nonlocalmeans(image; patch_radius = 1, search_radius = 2)[1] ≈ image
+        @test nonlocalmeans(image; patch_radius = 1, search_radius = 2) ≈ image
     end
 
     clean = fill(1.0, 9, 9)
     noisy = [1 + 0.2 * (-1)^(i + j) for i in 1:9, j in 1:9]
-    result = nonlocalmeans(noisy; patch_radius = 1, search_radius = 2, h = 0.4)[1]
+    result = nonlocalmeans(noisy; patch_radius = 1, search_radius = 2, h = 0.4)
     @test sum(abs2, result .- clean) < sum(abs2, noisy .- clean)
 end
 
@@ -66,7 +66,7 @@ end
     # An empty patch comparison has no evidence of a difference, so it gets
     # unit weight rather than propagating NaNs.
     singleton = reshape(Float32[3], 1, 1)
-    @test nonlocalmeans(singleton; patch_radius = 0, search_radius = 0, skip_zero_offset = true)[1] == singleton
+    @test nonlocalmeans(singleton; patch_radius = 0, search_radius = 0, skip_zero_offset = true) == singleton
 end
 
 @testset "in place and aliasing" begin
@@ -154,7 +154,7 @@ end
 
     o3 = copy(z)
     nonlocalmeans!(o3, o3; channel_dim = 2, kw...)
-    @test o3 ≈ nonlocalmeans(z; channel_dim = 2, kw...)[1]
+    @test o3 ≈ nonlocalmeans(z; channel_dim = 2, kw...)
 
     @test_throws ArgumentError nonlocalmeans(v; channel_dim = 3)
     @test_throws DimensionMismatch nonlocalmeans(z, rand(Float32, size(z) .+ 1); channel_dim = 2)
@@ -166,7 +166,7 @@ end
     o = nonlocalmeans(img; kw...)
     @test o isa Matrix{RGB{Float32}}
     a = permutedims(Float32.(reinterpret(reshape, Float32, img)), (2, 3, 1))
-    r = nonlocalmeans(a; channel_dim = 3, kw...)[1]
+    r = nonlocalmeans(a; channel_dim = 3, kw...)
     @test red.(o) ≈ r[:, :, 1] && green.(o) ≈ r[:, :, 2] && blue.(o) ≈ r[:, :, 3]
 end
 
@@ -196,10 +196,10 @@ end
         new = nonlocalmeans(value, precision; patch_radius = pr, search_radius = 3, kw...)[1]
         @test new ≈ legacy
         legacy = NonLocalMeans.NLmeans_legacy(value; patch_size = pr, search_size = 3, kw...)
-        new = nonlocalmeans(value; patch_radius = pr, search_radius = 3, kw...)[1]
+        new = nonlocalmeans(value; patch_radius = pr, search_radius = 3, kw...)
         @test new ≈ legacy
     end
     # same defaults
     value = rand(12, 11)
-    @test nonlocalmeans(value)[1] ≈ NonLocalMeans.NLmeans_legacy(value)
+    @test nonlocalmeans(value) ≈ NonLocalMeans.NLmeans_legacy(value)
 end

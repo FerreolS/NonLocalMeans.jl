@@ -24,7 +24,7 @@ denoised jointly using `channel_dim=1`. Returns `output`.
 """
 function nonlocalmeans(img::AbstractArray{C, N}; kwargs...) where {C <: Colorant, N}
     data, T = _to_channels(img)
-    out, _ = nonlocalmeans(data; channel_dim = 1, kwargs...)
+    out = nonlocalmeans(data; channel_dim = 1, kwargs...)
     return _to_colors(out, C, T)
 end
 
