@@ -36,7 +36,7 @@ function _nonlocalmeans!(
     patch_radius = _as_radius(patch_radius, Val(M - 1), "patch_radius")
     search_radius = _as_radius(search_radius, Val(M - 1), "search_radius")
 
-    if output_precision !== nothing
+    if !isnothing(output_precision)
         axes(output_precision) == axes(value) ||
             throw(DimensionMismatch("output_precision and value must have the same axes"))
         Base.require_one_based_indexing(output_precision)
@@ -45,7 +45,7 @@ function _nonlocalmeans!(
         (Base.mightalias(output_precision, value) || Base.mightalias(output_precision, precision)) &&
             throw(ArgumentError("output_precision must not alias value or precision"))
     end
-    store_precision = output_precision !== nothing
+    store_precision = !isnothing(output_precision)
     denominator = store_precision ? output_precision : output
 
     source = Base.mightalias(output, value) ? copy(value) : value
@@ -59,6 +59,8 @@ function _nonlocalmeans!(
         ndrange = size(value)[2:end],
     )
     KernelAbstractions.synchronize(backend)
+
+    isnothing(output_precision) && return output
     return output, output_precision
 end
 

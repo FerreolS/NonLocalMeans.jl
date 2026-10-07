@@ -23,11 +23,10 @@ end
         reshape(Float32.(1:60), 3, 4, 5),
     )
     for value in values
-        precision = reshape(Float32.(0.2 .+ mod.(1:length(value), 5)), size(value))
         for patch_radius in (1, 3), search_radius in (0, 2), skip_zero_offset in (true, false)
             kw = (; patch_radius, search_radius, h = 4, skip_zero_offset)
-            expected = NonLocalMeans.NLmeans_legacy(value, precision; kw...)
-            actual, actual_precision = nonlocalmeans(value, precision; kw..., store_precision = true)
+            expected = NonLocalMeans.NLmeans_legacy(value; kw...)
+            actual = nonlocalmeans(value; kw...)
             @test actual ≈ expected
         end
     end
