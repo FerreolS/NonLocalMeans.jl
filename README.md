@@ -23,9 +23,7 @@ distance is the precision-weighted mean squared difference between patches.
 - `patch_radius` and `search_radius` are nonnegative integer radii. A tuple or
   `CartesianIndex` can specify a different radius in each dimension.
 - `h` controls the weight decay.
-- `skip_zero_offset` (default `false`) omits the patch center from the distance.
-- The KernelAbstractions backend is inferred from `value`; regular Julia
-  arrays use the CPU backend.
+- `skip_zero_offset` (default `false`) omits discard the distance computation between to identical patch (i.e  $d_{ij} = 0$ when $i = j$).
 
 `nonlocalmeans!` writes into `output`; if `output` aliases an input, that input
 is copied before the kernel is launched. Inputs must use one-based indexing.

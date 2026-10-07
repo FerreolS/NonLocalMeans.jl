@@ -55,19 +55,18 @@ function _nonlocalmeans!(
     kernel! = _nlmeans_kernel!(backend)
     kernel!(
         output, source, source_precision, denominator, store_precision,
-        patch_radius, search_radius, skip_zero_offset, T(h), Val(size(value, 1));
+        patch_radius, search_radius, skip_zero_offset, T(h^2), Val(size(value, 1));
         ndrange = size(value)[2:end],
     )
     KernelAbstractions.synchronize(backend)
     return output, output_precision
 end
 
-@kernel function _nlmeans_kernel!(output, value, precision, output_precision, store_precision, patch_radius, search_radius, skip_zero_offset, h, ::Val{C}) where {C}
+@kernel function _nlmeans_kernel!(output, value::AbstractArray{T, M}, precision::AbstractArray{T, M}, output_precision, store_precision, patch_radius, search_radius, skip_zero_offset, h², ::Val{C}) where {C, T, M}
     index = @index(Global, Cartesian)
     dims = size(value)[2:end]
     nspatial = length(dims)
-    zero_offset = CartesianIndex(ntuple(_ -> 0, nspatial))
-    z = zero(eltype(value))
+    z = zero(T)
     channels = ntuple(identity, Val(C))
     numerator = ntuple(_ -> z, Val(C))
     denom = ntuple(_ -> z, Val(C))
@@ -79,8 +78,10 @@ end
         nspatial,
     )
     @inbounds for candidate in CartesianIndices(search_ranges)
-        distance = z
-        distance_weight = z
+        skip_zero_offset && candidate == index && continue
+
+        distance = zero(T)
+        distance_weight = zero(T)
 
         patch_ranges = ntuple(
             dimension -> max(
@@ -95,7 +96,6 @@ end
             nspatial,
         )
         for offset in CartesianIndices(patch_ranges)
-            skip_zero_offset && offset == zero_offset && continue
             center_patch = index + offset
             candidate_patch = candidate + offset
             for c in channels
@@ -109,7 +109,7 @@ end
             end
         end
 
-        weight = iszero(distance_weight) ? one(distance_weight) : exp(-distance / distance_weight / h)
+        weight = iszero(distance_weight) ? zero(distance_weight) : exp(-distance / distance_weight / h²)
         pc = ntuple(c -> @inbounds(precision[c, candidate]), Val(C))
         vc = ntuple(c -> @inbounds(value[c, candidate]), Val(C))
         numerator = map((n, p, v) -> n + p * v * weight, numerator, pc, vc)
@@ -118,9 +118,9 @@ end
     end
 
     for c in 1:C
-        output[c, index] = numerator[c] / denom[c]
+        output[c, index] = numerator[c] / (denom[c] == zero(denom[c]) ? one(denom[c]) : denom[c])
         if store_precision
-            output_precision[c, index] = denom[c]^2 / squares[c]
+            output_precision[c, index] = denom[c]^2 / (squares[c] == zero(squares[c]) ? one(squares[c]) : squares[c])
         end
     end
 end

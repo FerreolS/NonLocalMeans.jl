@@ -15,8 +15,10 @@ function reference(value, precision; patch_radius, search_radius, h, skip_zero_o
         num = den = sq = zero(eltype(value))
         for j in R[max(first(R), i - sr):min(last(R), i + sr)]
             dist = wsum = zero(eltype(value))
+
+            skip_zero_offset && i == j && continue
+
             for o in CartesianIndices(ntuple(d -> -patch_radius:patch_radius, ndims(value)))
-                skip_zero_offset && iszero(o) && continue
                 a, b = i + o, j + o
                 (a in R && b in R) || continue
                 p1, p2 = precision[a], precision[b]
@@ -24,13 +26,13 @@ function reference(value, precision; patch_radius, search_radius, h, skip_zero_o
                 dist += (value[a] - value[b])^2 * w
                 wsum += w
             end
-            w = exp(-dist / wsum / h)
+            w = exp(-dist / wsum / h^2)
             num += precision[j] * value[j] * w
             den += precision[j] * w
             sq += precision[j] * w^2
         end
-        out[i] = num / den
-        outp[i] = den^2 / sq
+        out[i] = num / (den == zero(den) ? one(den) : den)
+        outp[i] = den^2 / (sq == zero(sq) ? one(sq) : sq)
     end
     return out, outp
 end
@@ -66,7 +68,7 @@ end
     # An empty patch comparison has no evidence of a difference, so it gets
     # unit weight rather than propagating NaNs.
     singleton = reshape(Float32[3], 1, 1)
-    @test nonlocalmeans(singleton; patch_radius = 0, search_radius = 0, skip_zero_offset = true) == singleton
+    @test nonlocalmeans(singleton; patch_radius = 0, search_radius = 0, skip_zero_offset = true) == reshape(Float32[0], 1, 1)
 end
 
 @testset "in place and aliasing" begin
