@@ -194,10 +194,10 @@ end
         value = rand(dims...)
         precision = rand(dims...) .+ 0.5
         kw = (; h = 0.7, skip_zero_offset = skip)
-        legacy = NonLocalMeans.NLmeans_legacy(value, precision; patch_size = pr, search_size = 3, kw...)
+        legacy = NonLocalMeans.NLmeans_legacy(value, precision; patch_radius = pr, search_radius = 3, kw...)
         new = nonlocalmeans(value, precision; patch_radius = pr, search_radius = 3, kw...)[1]
         @test new ≈ legacy
-        legacy = NonLocalMeans.NLmeans_legacy(value; patch_size = pr, search_size = 3, kw...)
+        legacy = NonLocalMeans.NLmeans_legacy(value; patch_radius = pr, search_radius = 3, kw...)
         new = nonlocalmeans(value; patch_radius = pr, search_radius = 3, kw...)
         @test new ≈ legacy
     end

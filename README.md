@@ -34,7 +34,6 @@ Colorant arrays are supported through the optional ColorTypes extension.
 WeightedArray values from WeightedData can be passed directly; their precision
 is used for denoising and returned with the result.
 
-
 [github-ci-img]: https://github.com/FerreolS/NonLocalMeans.jl/actions/workflows/CI.yml/badge.svg?branch=master
 [github-ci-url]: https://github.com/FerreolS/NonLocalMeans.jl/actions/workflows/CI.yml?query=branch%3Amaster
 [codecov-img]: http://codecov.io/github/FerreolS/NonLocalMeans.jl/coverage.svg?branch=master
