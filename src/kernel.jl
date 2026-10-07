@@ -67,6 +67,8 @@ end
     dims = size(value)[2:end]
     nspatial = length(dims)
     z = zero(T)
+    zero_offset = CartesianIndex(ntuple(_ -> 0, nspatial))
+
     channels = ntuple(identity, Val(C))
     numerator = ntuple(_ -> z, Val(C))
     denom = ntuple(_ -> z, Val(C))
@@ -78,7 +80,7 @@ end
         nspatial,
     )
     @inbounds for candidate in CartesianIndices(search_ranges)
-        skip_zero_offset && candidate == index && continue
+        #    skip_zero_offset && candidate == index && continue
 
         distance = zero(T)
         distance_weight = zero(T)
@@ -96,6 +98,8 @@ end
             nspatial,
         )
         for offset in CartesianIndices(patch_ranges)
+            skip_zero_offset && offset == zero_offset && continue
+
             center_patch = index + offset
             candidate_patch = candidate + offset
             for c in channels

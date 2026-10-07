@@ -24,7 +24,7 @@ function compute_weights(value::AbstractArray{T, N}, precision::AbstractArray{T,
     dist = zero(T)
     weight = zero(T)
     card = zero(Int)
-
+    zeroindex = CartesianIndex(ntuple(_ -> 0, N))
     skip_zero_offset && center1 == center2 && return T(0)
 
     # clip offsets once so that both shifted patches stay inside the array
@@ -34,6 +34,7 @@ function compute_weights(value::AbstractArray{T, N}, precision::AbstractArray{T,
         end
     )
     @inbounds for offset in offsets
+        skip_zero_offset && offset == zeroindex && continue
         i = center1 + offset
         j = center2 + offset
         p1p2 = (precision[i] + precision[j])

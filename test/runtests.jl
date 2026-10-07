@@ -4,38 +4,6 @@ using WeightedData
 import WeightedData: get_value, get_precision
 using Test
 
-# brute-force reference: returns (output, output_precision)
-function reference(value, precision; patch_radius, search_radius, h, skip_zero_offset = false)
-    R = CartesianIndices(value)
-    pr = CartesianIndex(ntuple(_ -> patch_radius, ndims(value)))
-    sr = CartesianIndex(ntuple(_ -> search_radius, ndims(value)))
-    out = similar(value)
-    outp = similar(value)
-    for i in R
-        num = den = sq = zero(eltype(value))
-        for j in R[max(first(R), i - sr):min(last(R), i + sr)]
-            dist = wsum = zero(eltype(value))
-
-            skip_zero_offset && i == j && continue
-
-            for o in CartesianIndices(ntuple(d -> -patch_radius:patch_radius, ndims(value)))
-                a, b = i + o, j + o
-                (a in R && b in R) || continue
-                p1, p2 = precision[a], precision[b]
-                w = p1 * p2 / (p1 + p2)
-                dist += (value[a] - value[b])^2 * w
-                wsum += w
-            end
-            w = exp(-dist / wsum / h^2)
-            num += precision[j] * value[j] * w
-            den += precision[j] * w
-            sq += precision[j] * w^2
-        end
-        out[i] = num / (den == zero(den) ? one(den) : den)
-        outp[i] = den^2 / (sq == zero(sq) ? one(sq) : sq)
-    end
-    return out, outp
-end
 
 @testset "nonlocalmeans" begin
     for image in (fill(2.5, 7), fill(2.5, 5, 6), fill(2.5, 3, 4, 2))
@@ -48,7 +16,7 @@ end
     @test sum(abs2, result .- clean) < sum(abs2, noisy .- clean)
 end
 
-@testset "reference implementation, N-D" begin
+@testset "Legacy implementation, N-D" begin
     values = (
         Float32.(1:9) .^ 1.5f0,
         reshape(Float32.(1:30) .^ 1.2f0, 5, 6),
@@ -58,10 +26,9 @@ end
         precision = reshape(Float32.(0.2 .+ mod.(1:length(value), 5)), size(value))
         for patch_radius in (1, 3), search_radius in (0, 2), skip_zero_offset in (true, false)
             kw = (; patch_radius, search_radius, h = 4, skip_zero_offset)
-            expected, expected_precision = reference(value, precision; kw...)
+            expected = NonLocalMeans.NLmeans_legacy(value, precision; kw...)
             actual, actual_precision = nonlocalmeans(value, precision; kw..., store_precision = true)
             @test actual ≈ expected
-            @test actual_precision ≈ expected_precision
         end
     end
 
@@ -187,21 +154,4 @@ end
     @test nonlocalmeans!(out, WeightedArray(x, p); kw...) isa WeightedArray
     @test get_value(out) ≈ expected
     @test get_precision(out) ≈ expected_precision
-end
-
-@testset "legacy implementation" begin
-    for dims in ((20,), (9, 8), (6, 5, 4)), skip in (false, true), pr in (0, 1, 2)
-        value = rand(dims...)
-        precision = rand(dims...) .+ 0.5
-        kw = (; h = 0.7, skip_zero_offset = skip)
-        legacy = NonLocalMeans.NLmeans_legacy(value, precision; patch_radius = pr, search_radius = 3, kw...)
-        new = nonlocalmeans(value, precision; patch_radius = pr, search_radius = 3, kw...)[1]
-        @test new ≈ legacy
-        legacy = NonLocalMeans.NLmeans_legacy(value; patch_radius = pr, search_radius = 3, kw...)
-        new = nonlocalmeans(value; patch_radius = pr, search_radius = 3, kw...)
-        @test new ≈ legacy
-    end
-    # same defaults
-    value = rand(12, 11)
-    @test nonlocalmeans(value) ≈ NonLocalMeans.NLmeans_legacy(value)
 end

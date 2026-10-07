@@ -9,7 +9,7 @@ real-valued arrays of any dimensionality, implemented with
 ```julia
 using NonLocalMeans
 
-denoised = nonlocalmeans(value; patch_radius = 2, search_radius = 7, h = 1)
+denoised, _ = nonlocalmeans(value; patch_radius = 2, search_radius = 7, h = 1)
 nonlocalmeans!(output, value; patch_radius = 2, search_radius = 7, h = 1)
 ```
 
@@ -23,7 +23,7 @@ distance is the precision-weighted mean squared difference between patches.
 - `patch_radius` and `search_radius` are nonnegative integer radii. A tuple or
   `CartesianIndex` can specify a different radius in each dimension.
 - `h` controls the weight decay.
-- `skip_zero_offset` (default `false`) omits discard the distance computation between to identical patch (i.e  $d_{ij} = 0$ when $i = j$).
+- `skip_zero_offset` (default `false`) omits the centeral pixel from the distance computation.
 
 `nonlocalmeans!` writes into `output`; if `output` aliases an input, that input
 is copied before the kernel is launched. Inputs must use one-based indexing.
