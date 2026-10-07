@@ -118,7 +118,9 @@ end
         vc = ntuple(c -> @inbounds(value[c, candidate]), Val(C))
         numerator = map((n, p, v) -> n + p * v * weight, numerator, pc, vc)
         denom = map((d, p) -> d + p * weight, denom, pc)
-        squares = map((q, p) -> q + p * weight^2, squares, pc)
+        if store_precision
+            squares = map((q, p) -> q + p * weight^2, squares, pc)
+        end
     end
 
     for c in 1:C
