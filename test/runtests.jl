@@ -6,8 +6,8 @@ using Test
 
 
 @testset "nonlocalmeans" begin
-    for image in (fill(2.5, 7), fill(2.5, 5, 6), fill(2.5, 3, 4, 2))
-        @test nonlocalmeans(image; patch_radius = 1, neighborhood = 2) ≈ image
+    for value in (fill(2.5, 7), fill(2.5, 5, 6), fill(2.5, 3, 4, 2))
+        @test nonlocalmeans(value; patch_radius = 1, neighborhood = 2) ≈ value
     end
 
     clean = fill(1.0, 9, 9)
@@ -67,19 +67,19 @@ end
 end
 
 @testset "output_precision" begin
-    x = rand(Float32, 9, 8)
-    p = rand(Float32, 9, 8) .+ 1
-    op = similar(x)
-    a, ret = nonlocalmeans!(similar(x), x, p, op; patch_radius = 1, neighborhood = 2, h = 1)
+    value = rand(Float32, 9, 8)
+    precision = rand(Float32, 9, 8) .+ 1
+    op = similar(value)
+    a, ret = nonlocalmeans!(similar(value), value, precision, op; patch_radius = 1, neighborhood = 2, h = 1)
     @test ret === op
-    @test a ≈ nonlocalmeans(x, p; patch_radius = 1, neighborhood = 2)[1]
-    @test nonlocalmeans(x, p; store_precision = true)[2] isa Matrix{Float32}
-    @test nonlocalmeans(x, p)[2] === nothing
+    @test a ≈ nonlocalmeans(value, precision; patch_radius = 1, neighborhood = 2)[1]
+    @test nonlocalmeans(value, precision; store_precision = true)[2] isa Matrix{Float32}
+    @test nonlocalmeans(value, precision)[2] === nothing
     # equal weights: precisions add up over the search window
-    nonlocalmeans!(similar(x), x, p, op; patch_radius = 0, neighborhood = 1, h = 1.0f12)
-    @test op[5, 4] ≈ sum(p[4:6, 3:5]) rtol = 1.0e-4
-    @test_throws ArgumentError nonlocalmeans!(x, x, p, x)
-    @test_throws ArgumentError nonlocalmeans!(similar(x), x, p, x; patch_radius = 1)
+    nonlocalmeans!(similar(value), value, precision, op; patch_radius = 0, neighborhood = 1, h = 1.0f12)
+    @test op[5, 4] ≈ sum(precision[4:6, 3:5]) rtol = 1.0e-4
+    @test_throws ArgumentError nonlocalmeans!(value, value, precision, value)
+    @test_throws ArgumentError nonlocalmeans!(similar(value), value, precision, value; patch_radius = 1)
 end
 
 @testset "multichannel / channel_dim" begin
@@ -92,9 +92,9 @@ end
     @test default_output ≈ default_expected
 
     kw = (patch_radius = 1, neighborhood = 2, h = 0.5f0)
-    x = rand(Float32, 3, 9, 8)
-    P = rand(Float32, 3, 9, 8) .+ 1
-    ref, refp = nonlocalmeans(x, P; channel_dim = 1, store_precision = true, kw...)
+    value = rand(Float32, 3, 9, 8)
+    precision = rand(Float32, 3, 9, 8) .+ 1
+    ref, refp = nonlocalmeans(value, precision; channel_dim = 1, store_precision = true, kw...)
 
     # one channel equals the plain function
     v = rand(Float32, 9, 8)
@@ -107,11 +107,11 @@ end
     @test b[1, :, :] ≈ a && bp[1, :, :] ≈ ap
 
     # channels share one weight, so differ from independent denoising
-    indep = cat((nonlocalmeans(x[c, :, :], P[c, :, :]; kw...)[1] for c in 1:3)...; dims = 3)
+    indep = cat((nonlocalmeans(value[c, :, :], precision[c, :, :]; kw...)[1] for c in 1:3)...; dims = 3)
     @test !(permutedims(indep, (3, 1, 2)) ≈ ref)
 
-    z = permutedims(x, (2, 1, 3))
-    Pz = permutedims(P, (2, 1, 3))
+    z = permutedims(value, (2, 1, 3))
+    Pz = permutedims(precision, (2, 1, 3))
     o, op = nonlocalmeans(z, Pz; channel_dim = 2, store_precision = true, kw...)
     @test o ≈ permutedims(ref, (2, 1, 3))
     @test op ≈ permutedims(refp, (2, 1, 3))
@@ -129,47 +129,47 @@ end
 end
 
 @testset "ColorTypes extension" begin
-    img = [RGB{Float32}(rand(3)...) for i in 1:10, j in 1:12]
+    value = [RGB{Float32}(rand(3)...) for i in 1:10, j in 1:12]
     kw = (patch_radius = 1, neighborhood = 2)
-    o = nonlocalmeans(img; kw...)
+    o = nonlocalmeans(value; kw...)
     @test o isa Matrix{RGB{Float32}}
-    a = permutedims(Float32.(reinterpret(reshape, Float32, img)), (2, 3, 1))
+    a = permutedims(Float32.(reinterpret(reshape, Float32, value)), (2, 3, 1))
     r = nonlocalmeans(a; channel_dim = 3, kw...)
     @test red.(o) ≈ r[:, :, 1] && green.(o) ≈ r[:, :, 2] && blue.(o) ≈ r[:, :, 3]
 end
 
 @testset "WeightedData extension" begin
-    x = rand(8, 9)
-    p = rand(8, 9) .+ 1
+    value = rand(8, 9)
+    precision = rand(8, 9) .+ 1
     kw = (patch_radius = 1, neighborhood = 2, h = 1.0)
-    expected, expected_precision = nonlocalmeans(x, p; kw..., store_precision = true)
+    expected, expected_precision = nonlocalmeans(value, precision; kw..., store_precision = true)
 
-    w = nonlocalmeans(WeightedArray(x, p); kw...)
+    w = nonlocalmeans(WeightedArray(value, precision); kw...)
     @test w isa WeightedArray
     @test get_value(w) ≈ expected
     @test get_precision(w) ≈ expected_precision
 
-    out = WeightedArray(similar(x), similar(p))
-    @test nonlocalmeans!(out, WeightedArray(x, p); kw...) isa WeightedArray
+    out = WeightedArray(similar(value), similar(precision))
+    @test nonlocalmeans!(out, WeightedArray(value, precision); kw...) isa WeightedArray
     @test get_value(out) ≈ expected
     @test get_precision(out) ≈ expected_precision
 end
 
 @testset "neighborhood" begin
-    x = rand(Float32, 9, 8)
+    value = rand(Float32, 9, 8)
     kw = (patch_radius = 1, h = 1)
-    @test nonlocalmeans(x; neighborhood = 2, kw...) ≈ nonlocalmeans(x; neighborhood = CartesianIndex(2, 2), kw...)
-    @test nonlocalmeans(x; neighborhood = 2, kw...) ≈ nonlocalmeans(x; neighborhood = CartesianIndices((-2:2, -2:2)), kw...)
-    asym = nonlocalmeans(x; neighborhood = CartesianIndices((0:2, -1:1)), kw...)
-    @test asym != nonlocalmeans(x; neighborhood = 2, kw...)
-    @test nonlocalmeans!(similar(x), x; neighborhood = CartesianIndices((0:2, -1:1)), kw...)[1] ≈ asym
-    @test asym ≈ NonLocalMeans.NLmeans_legacy(x; neighborhood = CartesianIndices((0:2, -1:1)), kw...)
-    @test nonlocalmeans(x; neighborhood = (2, 1), kw...) ≈ nonlocalmeans(x; neighborhood = CartesianIndex(2, 1), kw...)
-    @test_throws ArgumentError nonlocalmeans(x; neighborhood = CartesianIndices((-1:1,)))
+    @test nonlocalmeans(value; neighborhood = 2, kw...) ≈ nonlocalmeans(value; neighborhood = CartesianIndex(2, 2), kw...)
+    @test nonlocalmeans(value; neighborhood = 2, kw...) ≈ nonlocalmeans(value; neighborhood = CartesianIndices((-2:2, -2:2)), kw...)
+    asym = nonlocalmeans(value; neighborhood = CartesianIndices((0:2, -1:1)), kw...)
+    @test asym != nonlocalmeans(value; neighborhood = 2, kw...)
+    @test nonlocalmeans!(similar(value), value; neighborhood = CartesianIndices((0:2, -1:1)), kw...)[1] ≈ asym
+    @test asym ≈ NonLocalMeans.NLmeans_legacy(value; neighborhood = CartesianIndices((0:2, -1:1)), kw...)
+    @test nonlocalmeans(value; neighborhood = (2, 1), kw...) ≈ nonlocalmeans(value; neighborhood = CartesianIndex(2, 1), kw...)
+    @test_throws ArgumentError nonlocalmeans(value; neighborhood = CartesianIndices((-1:1,)))
 end
 
 @testset "patch window" begin
-    x = rand(Float32, 9, 8)
-    @test nonlocalmeans(x; patch_radius = (1, 2), neighborhood = 2) ≈ nonlocalmeans(x; patch_radius = CartesianIndices((-1:1, -2:2)), neighborhood = 2)
-    @test nonlocalmeans(x; patch_radius = (1, 2), neighborhood = 2) ≈ NonLocalMeans.NLmeans_legacy(x; patch_radius = CartesianIndex(1, 2), neighborhood = 2)
+    value = rand(Float32, 9, 8)
+    @test nonlocalmeans(value; patch_radius = (1, 2), neighborhood = 2) ≈ nonlocalmeans(value; patch_radius = CartesianIndices((-1:1, -2:2)), neighborhood = 2)
+    @test nonlocalmeans(value; patch_radius = (1, 2), neighborhood = 2) ≈ NonLocalMeans.NLmeans_legacy(value; patch_radius = CartesianIndex(1, 2), neighborhood = 2)
 end
