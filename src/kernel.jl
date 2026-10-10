@@ -1,20 +1,20 @@
-function _as_radius(r::Integer, ::Val{N}, name) where {N}
+function _to_CartesianIndex(r::Integer, ::Val{N}, name) where {N}
     0 <= r <= typemax(Int) || throw(ArgumentError("$name must be nonnegative"))
     return CartesianIndex(ntuple(_ -> Int(r), Val(N)))
 end
 
-function _as_radius(r::CartesianIndex{N}, ::Val{N}, name) where {N}
-    all(>=(0), Tuple(r)) || throw(ArgumentError("$name must be nonnegative"))
+function _to_CartesianIndex(r::NTuple{N, <:Integer}, ::Val{N}, name) where {N}
+    all(>=(0), CartesianIndex(Tuple(r))) || throw(ArgumentError("$name must be nonnegative"))
     return r
 end
 
-function _as_radius(r::NTuple{N, <:Integer}, ::Val{N}, name) where {N}
-    all(>=(0), Tuple(r)) || throw(ArgumentError("$name must be nonnegative"))
+function _to_CartesianIndex(r::CartesianIndex{N}, ::Val{N}, name) where {N}
+    r >= CartesianIndex(ntuple(_ -> 0, Val(N))) || throw(ArgumentError("$name must be nonnegative"))
     return r
 end
 
 
-_as_radius(r, ::Val, name) =
+_to_CartesianIndex(r, ::Val, name) =
     throw(ArgumentError("$name must be a nonnegative integer, a tuple of nonnegative integers, or a CartesianIndex of matching dimension"))
 
 
@@ -33,8 +33,8 @@ function _nonlocalmeans!(
     axes(output) == axes(value) ||
         throw(DimensionMismatch("output and value must have the same axes"))
     Base.require_one_based_indexing(output, value, precision)
-    patch_radius = _as_radius(patch_radius, Val(M - 1), "patch_radius")
-    search_radius = _as_radius(search_radius, Val(M - 1), "search_radius")
+    patch_radius = _to_CartesianIndex(patch_radius, Val(M - 1), "patch_radius")
+    search_radius = _to_CartesianIndex(search_radius, Val(M - 1), "search_radius")
     neighborhood = -search_radius:search_radius
     selected_ranges = CartesianIndices(ntuple(n -> axes(value, n + 1), M - 1))
 
