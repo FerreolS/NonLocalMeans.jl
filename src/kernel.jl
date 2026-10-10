@@ -35,6 +35,8 @@ function _nonlocalmeans!(
     Base.require_one_based_indexing(output, value, precision)
     patch_radius = _as_radius(patch_radius, Val(M - 1), "patch_radius")
     search_radius = _as_radius(search_radius, Val(M - 1), "search_radius")
+    neighborhood = -search_radius:search_radius
+    selected_ranges = CartesianIndices(ntuple(n -> axes(value, n + 1), M - 1))
 
     if !isnothing(output_precision)
         axes(output_precision) == axes(value) ||
@@ -55,7 +57,7 @@ function _nonlocalmeans!(
     kernel! = _nlmeans_kernel!(backend)
     kernel!(
         output, source, source_precision, denominator, store_precision,
-        patch_radius, search_radius, skip_zero_offset, T(h^2), Val(size(value, 1));
+        patch_radius, neighborhood, selected_ranges, skip_zero_offset, T(h^2), Val(size(value, 1));
         ndrange = size(value)[2:end],
     )
     KernelAbstractions.synchronize(backend)
@@ -64,7 +66,7 @@ function _nonlocalmeans!(
     return output, output_precision
 end
 
-@kernel function _nlmeans_kernel!(output, value::AbstractArray{T, M}, precision::AbstractArray{T, M}, output_precision, store_precision, patch_radius, search_radius, skip_zero_offset, h², ::Val{C}) where {C, T, M}
+@kernel function _nlmeans_kernel!(output, value::AbstractArray{T, M}, precision::AbstractArray{T, M}, output_precision, store_precision, patch_radius, neighborhood, selected_ranges, skip_zero_offset, h², ::Val{C}) where {C, T, M}
     index = @index(Global, Cartesian)
     dims = size(value)[2:end]
     nspatial = length(dims)
@@ -76,13 +78,9 @@ end
     denom = ntuple(_ -> z, Val(C))
     squares = ntuple(_ -> z, Val(C))
 
-    search_ranges = ntuple(
-        dimension ->
-        max(1, index[dimension] - search_radius[dimension]):min(dims[dimension], index[dimension] + search_radius[dimension]),
-        nspatial,
-    )
-    @inbounds for candidate in CartesianIndices(search_ranges)
-        #    skip_zero_offset && candidate == index && continue
+    search_ranges = (neighborhood .+ index) ∩ selected_ranges
+
+    @inbounds for candidate in search_ranges
 
         distance = zero(T)
         distance_weight = zero(T)
