@@ -1,20 +1,20 @@
-function _to_CartesianIndex(r::Integer, ::Val{N}, name) where {N}
-    0 <= r <= typemax(Int) || throw(ArgumentError("$name must be nonnegative"))
-    return CartesianIndex(ntuple(_ -> Int(r), Val(N)))
+function _to_CartesianIndices(r::Integer, ::Val{N}, name) where {N}
+    return _to_CartesianIndices(ntuple(_ -> Int(r), Val(N)), Val(N), name)
 end
 
-function _to_CartesianIndex(r::NTuple{N, <:Integer}, ::Val{N}, name) where {N}
-    all(>=(0), CartesianIndex(Tuple(r))) || throw(ArgumentError("$name must be nonnegative"))
-    return r
+function _to_CartesianIndices(r::NTuple{N, <:Integer}, ::Val{N}, name) where {N}
+    return _to_CartesianIndices(CartesianIndex(r), Val(N), name)
 end
 
-function _to_CartesianIndex(r::CartesianIndex{N}, ::Val{N}, name) where {N}
+function _to_CartesianIndices(r::CartesianIndex{N}, ::Val{N}, name) where {N}
     r >= CartesianIndex(ntuple(_ -> 0, Val(N))) || throw(ArgumentError("$name must be nonnegative"))
-    return r
+    return -r:r
 end
 
 
-_to_CartesianIndex(r, ::Val, name) =
+_to_CartesianIndices(r::CartesianIndices{N}, ::Val{N}, name) where {N} = r
+
+_to_CartesianIndices(r, ::Val, name) =
     throw(ArgumentError("$name must be a nonnegative integer, a tuple of nonnegative integers, or a CartesianIndex of matching dimension"))
 
 
@@ -24,7 +24,7 @@ function _nonlocalmeans!(
         precision::AbstractArray{T, M} = FastUniformArray{T, M}(one(T), size(value)),
         output_precision = nothing;
         patch_radius = 2,
-        search_radius = 7,
+        neighborhood = 7,
         h::Real = 1,
         skip_zero_offset::Bool = false,
     ) where {T, M}
@@ -33,9 +33,8 @@ function _nonlocalmeans!(
     axes(output) == axes(value) ||
         throw(DimensionMismatch("output and value must have the same axes"))
     Base.require_one_based_indexing(output, value, precision)
-    patch_radius = _to_CartesianIndex(patch_radius, Val(M - 1), "patch_radius")
-    search_radius = _to_CartesianIndex(search_radius, Val(M - 1), "search_radius")
-    neighborhood = -search_radius:search_radius
+    patch_radius = _to_CartesianIndices(patch_radius, Val(M - 1), "patch_radius")
+    neighborhood = _to_CartesianIndices(neighborhood, Val(M - 1), "neighborhood")
     selected_ranges = CartesianIndices(ntuple(n -> axes(value, n + 1), M - 1))
 
     if !isnothing(output_precision)
@@ -87,11 +86,11 @@ end
 
         patch_ranges = ntuple(
             dimension -> max(
-                -patch_radius[dimension],
+                first(patch_radius.indices[dimension]),
                 1 - index[dimension],
                 1 - candidate[dimension],
             ):min(
-                patch_radius[dimension],
+                last(patch_radius.indices[dimension]),
                 dims[dimension] - index[dimension],
                 dims[dimension] - candidate[dimension],
             ),

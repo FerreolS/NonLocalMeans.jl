@@ -13,7 +13,7 @@ nonlocalmeans!
 ```julia
 using NonLocalMeans
 
-output = nonlocalmeans(image; patch_radius = 2, search_radius = 7, h = 1)
+output = nonlocalmeans(image; patch_radius = 2, neighborhood = 7, h = 1)
 ```
 
 Supply a precision array when samples have different confidence values.

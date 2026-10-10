@@ -8,12 +8,15 @@ using KernelAbstractions: @index, @kernel
 
 include("kernel.jl")
 """
-    nonlocalmeans(value, precision = ones; patch_radius=2, search_radius=7, h=1,
+    nonlocalmeans(value, precision = ones; patch_radius=2, neighborhood=7, h=1,
               skip_zero_offset=false, store_precision=false)
 
 Non-local means denoising of an N-dimensional array using KernelAbstractions.
-`patch_radius` and `search_radius` are radii: an integer (same in every
-dimension) or a `Tuple` of integers, or a `CartesianIndex` with one radius per dimension.
+`patch_radius` is a radius: an integer (same in every dimension), a `Tuple` of
+integers, or a `CartesianIndex` with one radius per dimension.
+`neighborhood` defines the search window and accepts the same radius forms, or a
+`CartesianIndices` of offsets relative to each sample, e.g.
+`CartesianIndices((-2:2, 0:3))` for an asymmetric window.
 If `store_precision` is true, the precision of each output sample is stored in a separate array and returned.
 With an explicit `precision`, the function returns `(output, output_precision)`,
 with `output_precision` equal to `nothing` unless `store_precision` is true.
@@ -32,7 +35,7 @@ function nonlocalmeans(
         value::AbstractArray{T, N},
         precision::AbstractArray{T, N};
         patch_radius = 2,
-        search_radius = 7,
+        neighborhood = 7,
         h::Real = 1,
         skip_zero_offset::Bool = false,
         store_precision = false,
@@ -47,7 +50,7 @@ function nonlocalmeans(
         precision,
         output_precision;
         patch_radius,
-        search_radius,
+        neighborhood,
         h,
         skip_zero_offset,
         channel_dim,
@@ -84,7 +87,7 @@ function nonlocalmeans!(
         precision::AbstractArray{T, N} = FastUniformArray{T, N}(one(T), size(value)),
         output_precision = nothing;
         patch_radius = 2,
-        search_radius = 7,
+        neighborhood = 7,
         h::Real = 1,
         skip_zero_offset::Bool = false,
         channel_dim::Union{Nothing, Integer} = nothing,
@@ -100,7 +103,7 @@ function nonlocalmeans!(
         permuted_op = output_precision === nothing ? nothing : permutedims(output_precision, perm)
         _nonlocalmeans!(
             permuted_output, permutedims(value, perm), permuted_precision, permuted_op;
-            patch_radius, search_radius, h, skip_zero_offset,
+            patch_radius, neighborhood, h, skip_zero_offset,
         )
         copyto!(output, permutedims(permuted_output, invperm(perm)))
         permuted_op === nothing || copyto!(output_precision, permutedims(permuted_op, invperm(perm)))
@@ -121,7 +124,7 @@ function nonlocalmeans!(
     _nonlocalmeans!(
         lift(output), lift(value), lift(precision),
         output_precision === nothing ? nothing : lift(output_precision);
-        patch_radius, search_radius, h, skip_zero_offset,
+        patch_radius, neighborhood, h, skip_zero_offset,
     )
     return output, output_precision
 end

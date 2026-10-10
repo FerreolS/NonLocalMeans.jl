@@ -1,15 +1,16 @@
-function NLmeans_legacy(value::AbstractArray{T, N}, precision::AbstractArray{T, N} = FastUniformArray{T, N}(one(T), size(value)); patch_radius = 2, search_radius = 7, h = 1, skip_zero_offset::Bool = false) where {T, N}
+function NLmeans_legacy(value::AbstractArray{T, N}, precision::AbstractArray{T, N} = FastUniformArray{T, N}(one(T), size(value)); patch_radius = 2, neighborhood = 7, h = 1, skip_zero_offset::Bool = false) where {T, N}
     size(value) == size(precision) || throw(DimensionMismatch("value and precision must have the same size"))
     output = similar(value)
     patch_radius isa Int && (patch_radius = CartesianIndex(ntuple(_ -> patch_radius, N)))
-    search_radius isa Int && (search_radius = CartesianIndex(ntuple(_ -> search_radius, N)))
+    neighborhood isa Int && (neighborhood = CartesianIndex(ntuple(_ -> neighborhood, N)))
+    window = neighborhood isa CartesianIndices ? neighborhood : (-neighborhood:neighborhood)
     idx = CartesianIndices(value)
     firstI, lastI = first(idx), last(idx)
     h2 = h^2
     for i in idx
         numerator = zero(eltype(value))
         denominator = zero(eltype(value))
-        for j in max(firstI, i - search_radius):min(lastI, i + search_radius)
+        for j in (window .+ i) ∩ idx
             w = compute_weights(value, precision, i, j, patch_radius, h2; skip_zero_offset)
             numerator += precision[j] * value[j] * w
             denominator += precision[j] * w
