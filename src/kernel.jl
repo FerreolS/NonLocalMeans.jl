@@ -23,7 +23,7 @@ function _nonlocalmeans!(
         value::AbstractArray{T, M},
         precision::AbstractArray{T, M} = FastUniformArray{T, M}(one(T), size(value)),
         output_precision = nothing;
-        patch_radius = 2,
+        patch = 2,
         neighborhood = 7,
         h::Real = 1,
         skip_zero_offset::Bool = false,
@@ -33,7 +33,7 @@ function _nonlocalmeans!(
     axes(output) == axes(value) ||
         throw(DimensionMismatch("output and value must have the same axes"))
     Base.require_one_based_indexing(output, value, precision)
-    patch_radius = _to_CartesianIndices(patch_radius, Val(M - 1), "patch_radius")
+    patch = _to_CartesianIndices(patch, Val(M - 1), "patch")
     neighborhood = _to_CartesianIndices(neighborhood, Val(M - 1), "neighborhood")
     selected_ranges = CartesianIndices(ntuple(n -> axes(value, n + 1), M - 1))
 
@@ -56,7 +56,7 @@ function _nonlocalmeans!(
     kernel! = _nlmeans_kernel!(backend)
     kernel!(
         output, source, source_precision, denominator, store_precision,
-        patch_radius, neighborhood, selected_ranges, skip_zero_offset, T(h^2), Val(size(value, 1));
+        patch, neighborhood, selected_ranges, skip_zero_offset, T(h^2), Val(size(value, 1));
         ndrange = size(value)[2:end],
     )
     KernelAbstractions.synchronize(backend)
@@ -65,7 +65,7 @@ function _nonlocalmeans!(
     return output, output_precision
 end
 
-@kernel function _nlmeans_kernel!(output, value::AbstractArray{T, M}, precision::AbstractArray{T, M}, output_precision, store_precision, patch_radius, neighborhood, selected_ranges, skip_zero_offset, h², ::Val{C}) where {C, T, M}
+@kernel function _nlmeans_kernel!(output, value::AbstractArray{T, M}, precision::AbstractArray{T, M}, output_precision, store_precision, patch, neighborhood, selected_ranges, skip_zero_offset, h², ::Val{C}) where {C, T, M}
     index = @index(Global, Cartesian)
     dims = size(value)[2:end]
     nspatial = length(dims)
@@ -84,29 +84,21 @@ end
         distance = zero(T)
         distance_weight = zero(T)
 
-        patch_ranges = ntuple(
-            dimension -> max(
-                first(patch_radius.indices[dimension]),
-                1 - index[dimension],
-                1 - candidate[dimension],
-            ):min(
-                last(patch_radius.indices[dimension]),
-                dims[dimension] - index[dimension],
-                dims[dimension] - candidate[dimension],
-            ),
-            nspatial,
-        )
-        for offset in CartesianIndices(patch_ranges)
+        patch_ranges = patch ∩ (selected_ranges .- index) ∩ (selected_ranges .- candidate)
+        for offset in patch_ranges
             skip_zero_offset && offset == zero_offset && continue
 
             center_patch = index + offset
+            #    center_patch ∉ selected_ranges && continue
             candidate_patch = candidate + offset
+            #   candidate_patch ∉ selected_ranges && continue
+
             for c in channels
-                p1 = @inbounds precision[c, center_patch]
-                p2 = @inbounds precision[c, candidate_patch]
+                p1 = precision[c, center_patch]
+                p2 = precision[c, candidate_patch]
                 p1p2 = p1 + p2
                 patch_weight = (p1p2 == 0 ? zero(p1p2) : (p1 * p2) / p1p2)
-                difference = @inbounds value[c, center_patch] - value[c, candidate_patch]
+                difference = value[c, center_patch] - value[c, candidate_patch]
                 distance += difference^2 * patch_weight
                 distance_weight += patch_weight
             end
@@ -122,7 +114,7 @@ end
         end
     end
 
-    for c in 1:C
+    @inbounds for c in 1:C
         output[c, index] = numerator[c] / (denom[c] == zero(denom[c]) ? one(denom[c]) : denom[c])
         if store_precision
             output_precision[c, index] = denom[c]^2 / (squares[c] == zero(squares[c]) ? one(squares[c]) : squares[c])

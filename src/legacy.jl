@@ -1,7 +1,7 @@
-function NLmeans_legacy(value::AbstractArray{T, N}, precision::AbstractArray{T, N} = FastUniformArray{T, N}(one(T), size(value)); patch_radius = 2, neighborhood = 7, h = 1, skip_zero_offset::Bool = false) where {T, N}
+function NLmeans_legacy(value::AbstractArray{T, N}, precision::AbstractArray{T, N} = FastUniformArray{T, N}(one(T), size(value)); patch = 2, neighborhood = 7, h = 1, skip_zero_offset::Bool = false) where {T, N}
     size(value) == size(precision) || throw(DimensionMismatch("value and precision must have the same size"))
     output = similar(value)
-    patch_radius isa Int && (patch_radius = CartesianIndex(ntuple(_ -> patch_radius, N)))
+    patch isa Int && (patch = CartesianIndex(ntuple(_ -> patch, N)))
     neighborhood isa Int && (neighborhood = CartesianIndex(ntuple(_ -> neighborhood, N)))
     window = neighborhood isa CartesianIndices ? neighborhood : (-neighborhood:neighborhood)
     idx = CartesianIndices(value)
@@ -11,7 +11,7 @@ function NLmeans_legacy(value::AbstractArray{T, N}, precision::AbstractArray{T, 
         numerator = zero(eltype(value))
         denominator = zero(eltype(value))
         for j in (window .+ i) ∩ idx
-            w = compute_weights(value, precision, i, j, patch_radius, h2; skip_zero_offset)
+            w = compute_weights(value, precision, i, j, patch, h2; skip_zero_offset)
             numerator += precision[j] * value[j] * w
             denominator += precision[j] * w
         end
@@ -20,7 +20,7 @@ function NLmeans_legacy(value::AbstractArray{T, N}, precision::AbstractArray{T, 
     return output
 end
 
-function compute_weights(value::AbstractArray{T, N}, precision::AbstractArray{T, N}, center1::CartesianIndex{N}, center2::CartesianIndex{N}, patch_radius::CartesianIndex{N}, h2::Real; skip_zero_offset::Bool = false) where {T, N}
+function compute_weights(value::AbstractArray{T, N}, precision::AbstractArray{T, N}, center1::CartesianIndex{N}, center2::CartesianIndex{N}, patch::CartesianIndex{N}, h2::Real; skip_zero_offset::Bool = false) where {T, N}
     axes(value) == axes(precision) || throw(DimensionMismatch("value and precision must have the same axes"))
     dist = zero(T)
     weight = zero(T)
@@ -29,7 +29,7 @@ function compute_weights(value::AbstractArray{T, N}, precision::AbstractArray{T,
 
     # clip offsets once so that both shifted patches stay inside the array
     offsets = CartesianIndices(
-        map(axes(value), Tuple(center1), Tuple(center2), Tuple(patch_radius)) do ax, c1, c2, r
+        map(axes(value), Tuple(center1), Tuple(center2), Tuple(patch)) do ax, c1, c2, r
             (-r:r) ∩ (ax .- c1) ∩ (ax .- c2)
         end
     )
