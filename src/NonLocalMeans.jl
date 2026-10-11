@@ -8,28 +8,35 @@ using KernelAbstractions: @index, @kernel
 
 include("kernel.jl")
 """
-    nonlocalmeans(value, precision = ones; patch=2, neighborhood=7, h=1,
-              skip_zero_offset=false, store_precision=false)
+    nonlocalmeans(value[, precision]; patch = 2, neighborhood = 7, h = 1,
+                  skip_zero_offset = false, store_precision = false,
+                  channel_dim = nothing)
 
-Non-local means denoising of an N-dimensional array using KernelAbstractions.
-`patch` is a radius: an integer (same in every dimension), a `Tuple` of
-integers, or a `CartesianIndex` with one radius per dimension.
-`neighborhood` defines the search window and accepts the same radius forms, or a
+Apply non-local means denoising to an `N`-dimensional real-valued array using
+`KernelAbstractions.jl`.
+
+`patch` is the patch radius: an integer (same in every dimension), a `Tuple` of
+integers, or a `CartesianIndex` with one radius per dimension. `neighborhood`
+defines the search window and accepts the same radius forms, or a
 `CartesianIndices` of offsets relative to each sample, e.g.
 `CartesianIndices((-2:2, 0:3))` for an asymmetric window.
-If `store_precision` is true, the precision of each output sample is stored in a separate array and returned.
-With an explicit `precision`, the function returns `(output, output_precision)`,
-with `output_precision` equal to `nothing` unless `store_precision` is true.
-Without `precision` (unit precision everywhere) only `output` is returned,
-unless `store_precision` is true, in which case `(output, output_precision)` is
-returned. Inputs must use one-based indexing.
 
-If `channel_dim` is an integer, that dimension of `value` indexes channels that
-are denoised jointly (one common set of weights, see
-joint-channel denoising); patches and search windows then span the
-remaining dimensions only. `precision` and the returned precision always have the
-same size as `value` (one precision per channel and pixel). With `channel_dim = nothing` (default) all dimensions are
-spatial.
+If `precision` is supplied, it weights the patch distances and is used to
+compute the denoising weights. When `precision` is omitted, a unit precision array
+is used and only `output` is returned unless `store_precision = true`.
+With an explicit `precision`, the function returns `(output, output_precision)`;
+`output_precision` is `nothing` unless `store_precision = true`.
+
+`skip_zero_offset` excludes the center sample from the distance computation when
+`true`. The weights are `exp(-patch_distance / h)`, where `patch_distance` is the
+precision-weighted mean squared difference between patches.
+
+Inputs must use one-based indexing. If `channel_dim` is an integer, that
+permutation is treated as the channel axis and denoised jointly using a single
+set of weights; patches and search windows then span the remaining dimensions.
+`precision` and any returned precision array have the same size as `value` (one
+precision value per channel and sample). With `channel_dim = nothing` (default),
+all dimensions are spatial.
 """
 function nonlocalmeans(
         value::AbstractArray{T, N},
@@ -69,14 +76,17 @@ function _channel_permutation(channel_dim::Integer, ::Val{N}) where {N}
 end
 
 """
-    nonlocalmeans!(output, value, precision = ones; kwargs...)
+    nonlocalmeans!(output, value[, precision]; patch = 2, neighborhood = 7,
+                  h = 1, skip_zero_offset = false, channel_dim = nothing,
+                  output_precision = nothing)
 
-In-place version of [`nonlocalmeans`](@ref); returns `(output,
-output_precision)`. Inputs aliasing `output` are copied first.
+In-place version of [`nonlocalmeans`](@ref). Inputs aliasing `output` are copied
+first.
 
-If `output_precision` (an array of the same size as `value`) is given, it is
-filled with the precision of each output sample, `(Σ pⱼwⱼ)² / Σ pⱼwⱼ²`,
-treating the weights as fixed.
+When `output_precision` is provided, it is filled with the estimated precision of
+each output sample, `(Σ pⱼwⱼ)² / Σ pⱼwⱼ²`, treating the weights as fixed.
+The return value is `output` unless `output_precision` is supplied, in which case
+it is `(output, output_precision)`.
 
 `channel_dim` has the same meaning as in [`nonlocalmeans`](@ref).
 """

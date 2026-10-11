@@ -9,33 +9,37 @@ real-valued arrays of any dimensionality, implemented with
 ```julia
 using NonLocalMeans
 
-@denoised = nonlocalmeans(value; patch_radius = 2, neighborhood = 7, h = 1)
-nonlocalmeans!(output, value; patch_radius = 2, neighborhood = 7, h = 1)
+img = randn(Float32, 64, 64)
+
+denoised = nonlocalmeans(img; patch = 2, neighborhood = 7, h = 1)
+nonlocalmeans!(output, img; patch = 2, neighborhood = 7, h = 1)
 ```
 
 Each sample is replaced by a weighted average of the samples in its search
 neighborhood. `precision` is optional and defaults to a uniform array. The
-functions return `(output, output_precision)`. The second value is `nothing`
-unless `store_precision=true` or an output-precision array is provided to the
-in-place function. The weights are `exp(-patch_distance / h)`, where the patch
-distance is the precision-weighted mean squared difference between patches.
+functions return `output` unless `store_precision = true` (or an
+`output_precision` array is supplied to the in-place variant), in which case they
+return `(output, output_precision)`. The weights are `exp(-patch_distance / h)`,
+where the patch distance is the precision-weighted mean squared difference
+between patches.
 
-- `patch_radius` is a nonnegative integer radius. A tuple or `CartesianIndex`
-  can specify a different radius in each dimension.
-- `neighborhood` defines the search window: a radius (same forms as
-  `patch_radius`) or a `CartesianIndices` of offsets, e.g.
-  `CartesianIndices((-2:2, 0:3))` for an asymmetric window.
+- `patch` is a nonnegative integer radius. A tuple or `CartesianIndex` can
+  specify a different radius in each dimension.
+- `neighborhood` defines the search window: a radius (same forms as `patch`) or
+a `CartesianIndices` of offsets, e.g. `CartesianIndices((-2:2, 0:3))` for an
+asymmetric window.
 - `h` controls the weight decay.
-- `skip_zero_offset` (default `false`) omits the centeral pixel from the distance computation.
+- `skip_zero_offset` (default `false`) omits the center pixel from the distance
+  computation.
 
-`nonlocalmeans!` writes into `output`; if `output` aliases an input, that input
-is copied before the kernel is launched. Inputs must use one-based indexing.
-Set `channel_dim` to the channel axis to denoise channels jointly; patches and
-search windows span the remaining dimensions.
+`nonlocalmeans!` writes into `output`; if `output` aliases an input, that input is
+copied before the kernel is launched. Inputs must use one-based indexing. Set
+`channel_dim` to the channel axis to denoise channels jointly; patches and search
+windows span the remaining dimensions.
 
 Colorant arrays are supported through the optional ColorTypes extension.
-WeightedArray values from WeightedData can be passed directly; their precision
-is used for denoising and returned with the result.
+WeightedArray values from WeightedData can be passed directly; their precision is
+used for denoising and returned with the result.
 
 [github-ci-img]: https://github.com/FerreolS/NonLocalMeans.jl/actions/workflows/CI.yml/badge.svg?branch=master
 [github-ci-url]: https://github.com/FerreolS/NonLocalMeans.jl/actions/workflows/CI.yml?query=branch%3Amaster

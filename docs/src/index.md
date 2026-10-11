@@ -13,15 +13,16 @@ nonlocalmeans!
 ```julia
 using NonLocalMeans
 
-output = nonlocalmeans(image; patch_radius = 2, neighborhood = 7, h = 1)
+img = randn(Float32, 64, 64)
+output = nonlocalmeans(img; patch = 2, neighborhood = 7, h = 1)
 ```
 
-Supply a precision array when samples have different confidence values.
-Request estimated output precision with `store_precision=true`:
+Supply a precision array when samples have different confidence values. Request
+estimated output precision with `store_precision = true`:
 
 ```julia
 output, output_precision = nonlocalmeans(
-    image,
+    img,
     precision;
     store_precision = true,
 )
