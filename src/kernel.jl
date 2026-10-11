@@ -65,7 +65,7 @@ function _nonlocalmeans!(
     return output, output_precision
 end
 
-@kernel function _nlmeans_kernel!(output, value::AbstractArray{T, M}, precision::AbstractArray{T, M}, output_precision, store_precision, patch, neighborhood, selected_ranges, skip_zero_offset, h², ::Val{C}) where {C, T, M}
+@kernel function _nlmeans_kernel!(output, value::AbstractArray{T, M}, precision::AbstractArray{T, M}, output_precision, store_precision, patch::PT, neighborhood::NT, selected_ranges::ST, skip_zero_offset, h², ::Val{C}) where {C, T, M, PT, NT, ST}
     index = @index(Global, Cartesian)
     dims = size(value)[2:end]
     nspatial = length(dims)
@@ -77,21 +77,22 @@ end
     denom = ntuple(_ -> z, Val(C))
     squares = ntuple(_ -> z, Val(C))
 
+    patch_CartesianIndices = (PT === CartesianIndices && ST === CartesianIndices)
     search_ranges = (neighborhood .+ index) ∩ selected_ranges
 
     @inbounds for candidate in search_ranges
 
         distance = zero(T)
         distance_weight = zero(T)
-
-        patch_ranges = patch ∩ (selected_ranges .- index) ∩ (selected_ranges .- candidate)
+         
+        patch_ranges = patch_CartesianIndices ? patch ∩ (selected_ranges .- index) ∩ (selected_ranges .- candidate) : patch
         for offset in patch_ranges
             skip_zero_offset && offset == zero_offset && continue
 
             center_patch = index + offset
-            #    center_patch ∉ selected_ranges && continue
+            patch_CartesianIndices || (center_patch ∉ selected_ranges && continue)
             candidate_patch = candidate + offset
-            #   candidate_patch ∉ selected_ranges && continue
+            patch_CartesianIndices || (   candidate_patch ∉ selected_ranges && continue)
 
             for c in channels
                 p1 = precision[c, center_patch]
