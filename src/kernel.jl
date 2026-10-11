@@ -12,7 +12,7 @@ function _to_CartesianIndices(r::CartesianIndex{N}, ::Val{N}, name) where {N}
 end
 
 
-_to_CartesianIndices(r::CartesianIndices{N}, ::Val{N}, name) where {N} = r
+_to_CartesianIndices(r::Union{CartesianIndices{N}, <:AbstractArray{CartesianIndex{N}}}, ::Val{N}, _) where {N} = r
 
 _to_CartesianIndices(r, ::Val, name) =
     throw(ArgumentError("$name must be a nonnegative integer, a tuple of nonnegative integers, or a CartesianIndex of matching dimension"))
