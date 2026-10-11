@@ -31,6 +31,8 @@ asymmetric window.
 - `h` controls the weight decay.
 - `skip_zero_offset` (default `false`) omits the center pixel from the distance
   computation.
+- `selected_area` limits denoising to a subset of spatial coordinates, e.g. a
+  `CartesianIndices` slice or an array of `CartesianIndex`s.
 
 `nonlocalmeans!` writes into `output`; if `output` aliases an input, that input is
 copied before the kernel is launched. Inputs must use one-based indexing. Set

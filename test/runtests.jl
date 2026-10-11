@@ -14,6 +14,12 @@ using Test
     noisy = [1 + 0.2 * (-1)^(i + j) for i in 1:9, j in 1:9]
     result = nonlocalmeans(noisy; patch = 1, neighborhood = 2, h = 0.4)
     @test sum(abs2, result .- clean) < sum(abs2, noisy .- clean)
+
+    area = CartesianIndices(axes(noisy))
+    @test nonlocalmeans(noisy; patch = 1, neighborhood = 2, h = 0.4, selected_area = area) ≈ result
+    out = similar(noisy)
+    nonlocalmeans!(out, noisy; patch = 1, neighborhood = 2, h = 0.4, selected_area = area)
+    @test out ≈ result
 end
 
 @testset "Legacy implementation, N-D" begin

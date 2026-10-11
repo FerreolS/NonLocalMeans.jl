@@ -39,7 +39,9 @@ dimensions:
 output = nonlocalmeans(image; channel_dim = 3)
 ```
 
-The same keyword is available on `nonlocalmeans!`. Colorant arrays are also
-supported when ColorTypes is loaded.
+The same keyword is available on `nonlocalmeans!`. To limit denoising to a
+region of interest, pass `selected_area` as a `CartesianIndices` instance or an
+array of `CartesianIndex` values. Colorant arrays are also supported when
+ColorTypes is loaded.
 
 See the [API reference](api.md) for complete function documentation.

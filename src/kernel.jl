@@ -26,6 +26,7 @@ function _nonlocalmeans!(
         patch = 2,
         neighborhood = 7,
         h::Real = 1,
+        selected_area = nothing,
         skip_zero_offset::Bool = false,
     ) where {T, M}
     axes(value) == axes(precision) ||
@@ -35,7 +36,9 @@ function _nonlocalmeans!(
     Base.require_one_based_indexing(output, value, precision)
     patch = _to_CartesianIndices(patch, Val(M - 1), "patch")
     neighborhood = _to_CartesianIndices(neighborhood, Val(M - 1), "neighborhood")
-    selected_ranges = CartesianIndices(ntuple(n -> axes(value, n + 1), M - 1))
+    if isnothing(selected_area)
+        selected_area = CartesianIndices(ntuple(n -> axes(value, n + 1), M - 1))
+    end
 
     if !isnothing(output_precision)
         axes(output_precision) == axes(value) ||
@@ -56,7 +59,7 @@ function _nonlocalmeans!(
     kernel! = _nlmeans_kernel!(backend)
     kernel!(
         output, source, source_precision, denominator, store_precision,
-        patch, neighborhood, selected_ranges, skip_zero_offset, T(h^2), Val(size(value, 1));
+        patch, neighborhood, selected_area, skip_zero_offset, T(h^2), Val(size(value, 1));
         ndrange = size(value)[2:end],
     )
     KernelAbstractions.synchronize(backend)
@@ -65,7 +68,7 @@ function _nonlocalmeans!(
     return output, output_precision
 end
 
-@kernel function _nlmeans_kernel!(output, value::AbstractArray{T, M}, precision::AbstractArray{T, M}, output_precision, store_precision, patch::PT, neighborhood::NT, selected_ranges::ST, skip_zero_offset, h², ::Val{C}) where {C, T, M, PT, NT, ST}
+@kernel function _nlmeans_kernel!(output, value::AbstractArray{T, M}, precision::AbstractArray{T, M}, output_precision, store_precision, patch::PT, neighborhood::NT, selected_area::ST, skip_zero_offset, h², ::Val{C}) where {C, T, M, PT, NT, ST}
     index = @index(Global, Cartesian)
     dims = size(value)[2:end]
     nspatial = length(dims)
@@ -79,22 +82,22 @@ end
 
     patch_CartesianIndices = (PT === CartesianIndices && ST === CartesianIndices)
     search_CartesianIndices = (NT === CartesianIndices && ST === CartesianIndices)
-    search_ranges = search_CartesianIndices ? (neighborhood .+ index) ∩ selected_ranges : neighborhood .+ index
+    search_ranges = search_CartesianIndices ? (neighborhood .+ index) ∩ selected_area : neighborhood .+ index
 
     @inbounds for candidate in search_ranges
 
-        search_CartesianIndices || (candidate ∉ selected_ranges && continue)
+        search_CartesianIndices || (candidate ∉ selected_area && continue)
         distance = zero(T)
         distance_weight = zero(T)
-         
-        patch_ranges = patch_CartesianIndices ? patch ∩ (selected_ranges .- index) ∩ (selected_ranges .- candidate) : patch
+
+        patch_ranges = patch_CartesianIndices ? patch ∩ (selected_area .- index) ∩ (selected_area .- candidate) : patch
         for offset in patch_ranges
             skip_zero_offset && offset == zero_offset && continue
 
             center_patch = index + offset
-            patch_CartesianIndices || (center_patch ∉ selected_ranges && continue)
+            patch_CartesianIndices || (center_patch ∉ selected_area && continue)
             candidate_patch = candidate + offset
-            patch_CartesianIndices || (   candidate_patch ∉ selected_ranges && continue)
+            patch_CartesianIndices || (candidate_patch ∉ selected_area && continue)
 
             for c in channels
                 p1 = precision[c, center_patch]

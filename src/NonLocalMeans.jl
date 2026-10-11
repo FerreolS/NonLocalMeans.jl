@@ -10,7 +10,7 @@ include("kernel.jl")
 """
     nonlocalmeans(value[, precision]; patch = 2, neighborhood = 7, h = 1,
                   skip_zero_offset = false, store_precision = false,
-                  channel_dim = nothing)
+                  channel_dim = nothing, selected_area = nothing)
 
 Apply non-local means denoising to an `N`-dimensional real-valued array using
 `KernelAbstractions.jl`.
@@ -28,8 +28,11 @@ With an explicit `precision`, the function returns `(output, output_precision)`;
 `output_precision` is `nothing` unless `store_precision = true`.
 
 `skip_zero_offset` excludes the center sample from the distance computation when
-`true`. The weights are `exp(-patch_distance / h)`, where `patch_distance` is the
-precision-weighted mean squared difference between patches.
+`true`. `selected_area` optionally restricts the denoising to a subset of spatial
+positions; pass `nothing` (default) to use the full spatial domain or a
+`CartesianIndices`/array of `CartesianIndex`s to limit the valid search and patch
+locations. The weights are `exp(-patch_distance / h)`, where `patch_distance` is
+the precision-weighted mean squared difference between patches.
 
 Inputs must use one-based indexing. If `channel_dim` is an integer, that
 permutation is treated as the channel axis and denoised jointly using a single
@@ -47,6 +50,7 @@ function nonlocalmeans(
         skip_zero_offset::Bool = false,
         store_precision = false,
         channel_dim::Union{Nothing, Integer} = nothing,
+        selected_area = nothing,
     ) where {T, N}
     output = similar(value)
     output_precision = store_precision ? similar(value) : nothing
@@ -61,6 +65,7 @@ function nonlocalmeans(
         h,
         skip_zero_offset,
         channel_dim,
+        selected_area,
     )
 end
 
@@ -78,7 +83,7 @@ end
 """
     nonlocalmeans!(output, value[, precision]; patch = 2, neighborhood = 7,
                   h = 1, skip_zero_offset = false, channel_dim = nothing,
-                  output_precision = nothing)
+                  selected_area = nothing, output_precision = nothing)
 
 In-place version of [`nonlocalmeans`](@ref). Inputs aliasing `output` are copied
 first.
@@ -88,7 +93,8 @@ each output sample, `(Σ pⱼwⱼ)² / Σ pⱼwⱼ²`, treating the weights as f
 The return value is `output` unless `output_precision` is supplied, in which case
 it is `(output, output_precision)`.
 
-`channel_dim` has the same meaning as in [`nonlocalmeans`](@ref).
+`channel_dim` has the same meaning as in [`nonlocalmeans`](@ref). `selected_area`
+restricts valid patch and search locations to the supplied spatial subset.
 """
 function nonlocalmeans!(
         output::AbstractArray{T, N},
@@ -100,6 +106,7 @@ function nonlocalmeans!(
         h::Real = 1,
         skip_zero_offset::Bool = false,
         channel_dim::Union{Nothing, Integer} = nothing,
+        selected_area = nothing,
     ) where {T, N}
     if channel_dim !== nothing
         axes(output) == axes(value) ||
@@ -112,7 +119,7 @@ function nonlocalmeans!(
         permuted_op = output_precision === nothing ? nothing : permutedims(output_precision, perm)
         _nonlocalmeans!(
             permuted_output, permutedims(value, perm), permuted_precision, permuted_op;
-            patch, neighborhood, h, skip_zero_offset,
+            patch, neighborhood, h, skip_zero_offset, selected_area,
         )
         copyto!(output, permutedims(permuted_output, invperm(perm)))
         permuted_op === nothing || copyto!(output_precision, permutedims(permuted_op, invperm(perm)))
@@ -137,7 +144,7 @@ function nonlocalmeans!(
     _nonlocalmeans!(
         lift(output), lift(value), lift(precision),
         output_precision === nothing ? nothing : lift(output_precision);
-        patch, neighborhood, h, skip_zero_offset,
+        patch, neighborhood, h, selected_area, skip_zero_offset,
     )
     if isnothing(output_precision)
         return output
