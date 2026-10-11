@@ -78,10 +78,12 @@ end
     squares = ntuple(_ -> z, Val(C))
 
     patch_CartesianIndices = (PT === CartesianIndices && ST === CartesianIndices)
-    search_ranges = (neighborhood .+ index) ∩ selected_ranges
+    search_CartesianIndices = (NT === CartesianIndices && ST === CartesianIndices)
+    search_ranges = search_CartesianIndices ? (neighborhood .+ index) ∩ selected_ranges : neighborhood .+ index
 
     @inbounds for candidate in search_ranges
 
+        search_CartesianIndices || (candidate ∉ selected_ranges && continue)
         distance = zero(T)
         distance_weight = zero(T)
          
