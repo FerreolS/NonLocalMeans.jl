@@ -59,8 +59,7 @@ end
 
 function nonlocalmeans(value::AbstractArray{T, N}; store_precision = false, kwargs...) where {T, N}
     precision = FastUniformArray{T, N}(one(T), size(value))
-    result = nonlocalmeans(value, precision; store_precision, kwargs...)
-    return store_precision ? result : first(result)
+    return nonlocalmeans(value, precision; store_precision, kwargs...)
 end
 
 # permutation moving `channel_dim` to the front, keeping the other dims in order
@@ -107,7 +106,11 @@ function nonlocalmeans!(
         )
         copyto!(output, permutedims(permuted_output, invperm(perm)))
         permuted_op === nothing || copyto!(output_precision, permutedims(permuted_op, invperm(perm)))
-        return output, output_precision
+        if isnothing(output_precision)
+            return output
+        else
+            return (output, output_precision)
+        end
     end
     axes(value) == axes(precision) ||
         throw(DimensionMismatch("value and precision must have the same axes"))
@@ -126,7 +129,11 @@ function nonlocalmeans!(
         output_precision === nothing ? nothing : lift(output_precision);
         patch, neighborhood, h, skip_zero_offset,
     )
-    return output, output_precision
+    if isnothing(output_precision)
+        return output
+    else
+        return (output, output_precision)
+    end
 end
 
 include("legacy.jl")

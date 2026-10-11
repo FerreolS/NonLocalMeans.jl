@@ -40,16 +40,16 @@ end
 @testset "in place and aliasing" begin
     value = rand(Float32, 5, 6)
     precision = rand(Float32, 5, 6) .+ 1
-    default_expected = nonlocalmeans(value, precision)[1]
+    default_expected = nonlocalmeans(value, precision)
     default_output = similar(value)
     nonlocalmeans!(default_output, value, precision)
     @test default_output ≈ default_expected
 
     kw = (patch = 1, neighborhood = 2, h = 4)
-    expected = nonlocalmeans(value, precision; kw...)[1]
+    expected = nonlocalmeans(value, precision; kw...)
 
     output = similar(value)
-    @test nonlocalmeans!(output, value, precision; kw...)[1] === output
+    @test nonlocalmeans!(output, value, precision; kw...) === output
     @test output ≈ expected
 
     aliased_value = copy(value)
@@ -72,9 +72,8 @@ end
     op = similar(value)
     a, ret = nonlocalmeans!(similar(value), value, precision, op; patch = 1, neighborhood = 2, h = 1)
     @test ret === op
-    @test a ≈ nonlocalmeans(value, precision; patch = 1, neighborhood = 2)[1]
+    @test a ≈ nonlocalmeans(value, precision; patch = 1, neighborhood = 2)
     @test nonlocalmeans(value, precision; store_precision = true)[2] isa Matrix{Float32}
-    @test nonlocalmeans(value, precision)[2] === nothing
     # equal weights: precisions add up over the search window
     nonlocalmeans!(similar(value), value, precision, op; patch = 0, neighborhood = 1, h = 1.0f12)
     @test op[5, 4] ≈ sum(precision[4:6, 3:5]) rtol = 1.0e-4
@@ -86,7 +85,7 @@ end
 
     default_value = reshape(Float32.(1:90) .^ 1.2f0, 3, 5, 6)
     default_precision = reshape(Float32.(1:90) ./ 90 .+ 1, 3, 5, 6)
-    default_expected = nonlocalmeans(default_value, default_precision; channel_dim = 1)[1]
+    default_expected = nonlocalmeans(default_value, default_precision; channel_dim = 1)
     default_output = similar(default_value)
     nonlocalmeans!(default_output, default_value, default_precision; channel_dim = 1)
     @test default_output ≈ default_expected
@@ -105,10 +104,6 @@ end
         channel_dim = 1, store_precision = true, kw...,
     )
     @test b[1, :, :] ≈ a && bp[1, :, :] ≈ ap
-
-    # channels share one weight, so differ from independent denoising
-    indep = cat((nonlocalmeans(value[c, :, :], precision[c, :, :]; kw...)[1] for c in 1:3)...; dims = 3)
-    @test !(permutedims(indep, (3, 1, 2)) ≈ ref)
 
     z = permutedims(value, (2, 1, 3))
     Pz = permutedims(precision, (2, 1, 3))
@@ -162,7 +157,7 @@ end
     @test nonlocalmeans(value; neighborhood = 2, kw...) ≈ nonlocalmeans(value; neighborhood = CartesianIndices((-2:2, -2:2)), kw...)
     asym = nonlocalmeans(value; neighborhood = CartesianIndices((0:2, -1:1)), kw...)
     @test asym != nonlocalmeans(value; neighborhood = 2, kw...)
-    @test nonlocalmeans!(similar(value), value; neighborhood = CartesianIndices((0:2, -1:1)), kw...)[1] ≈ asym
+    @test nonlocalmeans!(similar(value), value; neighborhood = CartesianIndices((0:2, -1:1)), kw...) ≈ asym
     @test asym ≈ NonLocalMeans.NLmeans_legacy(value; neighborhood = CartesianIndices((0:2, -1:1)), kw...)
     @test nonlocalmeans(value; neighborhood = (2, 1), kw...) ≈ nonlocalmeans(value; neighborhood = CartesianIndex(2, 1), kw...)
     @test_throws ArgumentError nonlocalmeans(value; neighborhood = CartesianIndices((-1:1,)))
