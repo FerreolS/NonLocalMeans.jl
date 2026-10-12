@@ -1,6 +1,7 @@
 using NonLocalMeans
 using ColorTypes
 using WeightedData
+using OffsetArrays
 import WeightedData: get_value, get_precision
 using Test
 
