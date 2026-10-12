@@ -7,6 +7,8 @@ import StructuredArrays: FastUniformArray
 import KernelAbstractions
 using KernelAbstractions: @index, @kernel, @Const
 using OffsetArrays: OffsetArray
+using Adapt:adapt
+using LinearAlgebra: norm
 
 include("kernel.jl")
 """
