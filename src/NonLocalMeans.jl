@@ -1,15 +1,17 @@
 module NonLocalMeans
 
 export nonlocalmeans, nonlocalmeans!
+public skip_central_pixel_kernel, gaussian_kernel
 
 import StructuredArrays: FastUniformArray
 import KernelAbstractions
 using KernelAbstractions: @index, @kernel
+using OffsetArrays: OffsetArray
 
 include("kernel.jl")
 """
     nonlocalmeans(value[, precision]; patch = 2, neighborhood = 7, h = 1,
-                  skip_zero_offset = false, store_precision = false,
+                   store_precision = false,
                   channel_dim = nothing, selected_area = nothing)
 
 Apply non-local means denoising to an `N`-dimensional real-valued array using
@@ -27,8 +29,7 @@ is used and only `output` is returned unless `store_precision = true`.
 With an explicit `precision`, the function returns `(output, output_precision)`;
 `output_precision` is `nothing` unless `store_precision = true`.
 
-`skip_zero_offset` excludes the center sample from the distance computation when
-`true`. `selected_area` optionally restricts the denoising to a subset of spatial
+`selected_area` optionally restricts the denoising to a subset of spatial
 positions; pass `nothing` (default) to use the full spatial domain or a
 `CartesianIndices`/array of `CartesianIndex`s to limit the valid search and patch
 locations. The weights are `exp(-patch_distance / h)`, where `patch_distance` is
@@ -45,12 +46,12 @@ function nonlocalmeans(
         value::AbstractArray{T, N},
         precision::AbstractArray{T, N};
         patch = 2,
+        kernel = nothing,
         neighborhood = 7,
         h::Real = 1,
-        skip_zero_offset::Bool = false,
         store_precision = false,
         channel_dim::Union{Nothing, Integer} = nothing,
-        selected_area = nothing,
+        selected_area = nothing
     ) where {T, N}
     output = similar(value)
     output_precision = store_precision ? similar(value) : nothing
@@ -61,9 +62,9 @@ function nonlocalmeans(
         precision,
         output_precision;
         patch,
+        kernel,
         neighborhood,
         h,
-        skip_zero_offset,
         channel_dim,
         selected_area,
     )
@@ -82,7 +83,7 @@ end
 
 """
     nonlocalmeans!(output, value[, precision]; patch = 2, neighborhood = 7,
-                  h = 1, skip_zero_offset = false, channel_dim = nothing,
+                  h = 1, channel_dim = nothing,
                   selected_area = nothing, output_precision = nothing)
 
 In-place version of [`nonlocalmeans`](@ref). Inputs aliasing `output` are copied
@@ -102,9 +103,9 @@ function nonlocalmeans!(
         precision::AbstractArray{T, N} = FastUniformArray{T, N}(one(T), size(value)),
         output_precision = nothing;
         patch = 2,
+        kernel = nothing,
         neighborhood = 7,
         h::Real = 1,
-        skip_zero_offset::Bool = false,
         channel_dim::Union{Nothing, Integer} = nothing,
         selected_area = nothing,
     ) where {T, N}
@@ -119,7 +120,7 @@ function nonlocalmeans!(
         permuted_op = output_precision === nothing ? nothing : permutedims(output_precision, perm)
         _nonlocalmeans!(
             permuted_output, permutedims(value, perm), permuted_precision, permuted_op;
-            patch, neighborhood, h, skip_zero_offset, selected_area,
+            patch, kernel, neighborhood, h, selected_area,
         )
         copyto!(output, permutedims(permuted_output, invperm(perm)))
         permuted_op === nothing || copyto!(output_precision, permutedims(permuted_op, invperm(perm)))
@@ -144,7 +145,7 @@ function nonlocalmeans!(
     _nonlocalmeans!(
         lift(output), lift(value), lift(precision),
         output_precision === nothing ? nothing : lift(output_precision);
-        patch, neighborhood, h, selected_area, skip_zero_offset,
+        patch, kernel, neighborhood, h, selected_area,
     )
     if isnothing(output_precision)
         return output
@@ -152,6 +153,11 @@ function nonlocalmeans!(
         return (output, output_precision)
     end
 end
+
+
+skip_central_pixel_kernel(p::NTuple{N}) where {N} = (p != ntuple(_ -> 0, N))
+
+gaussian_kernel(r::NTuple; σ = 1.0) = exp(-norm(r)^2 / (2 * σ^2))
 
 include("legacy.jl")
 

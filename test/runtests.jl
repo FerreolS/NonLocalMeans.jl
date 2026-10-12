@@ -29,8 +29,8 @@ end
         reshape(Float32.(1:60), 3, 4, 5),
     )
     for value in values
-        for patch in (1, 3), neighborhood in (0, 2), skip_zero_offset in (true, false)
-            kw = (; patch, neighborhood, h = 4, skip_zero_offset)
+        for patch in (1, 3), neighborhood in (0, 2)
+            kw = (; patch, neighborhood, h = 4)
             expected = NonLocalMeans.NLmeans_legacy(value; kw...)
             actual = nonlocalmeans(value; kw...)
             @test actual ≈ expected
@@ -40,7 +40,7 @@ end
     # An empty patch comparison has no evidence of a difference, so it gets
     # unit weight rather than propagating NaNs.
     singleton = reshape(Float32[3], 1, 1)
-    @test nonlocalmeans(singleton; patch = 0, neighborhood = 0, skip_zero_offset = true) == reshape(Float32[0], 1, 1)
+    @test nonlocalmeans(singleton; patch = 0, neighborhood = 0) == singleton
 end
 
 @testset "in place and aliasing" begin

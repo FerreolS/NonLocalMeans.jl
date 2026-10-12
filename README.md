@@ -29,8 +29,6 @@ between patches.
 a `CartesianIndices` of offsets, e.g. `CartesianIndices((-2:2, 0:3))` for an
 asymmetric window.
 - `h` controls the weight decay.
-- `skip_zero_offset` (default `false`) omits the center pixel from the distance
-  computation.
 - `selected_area` limits denoising to a subset of spatial coordinates, e.g. a
   `CartesianIndices` slice or an array of `CartesianIndex`s.
 

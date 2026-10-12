@@ -24,10 +24,10 @@ function _nonlocalmeans!(
         precision::AbstractArray{T, M} = FastUniformArray{T, M}(one(T), size(value)),
         output_precision = nothing;
         patch = 2,
+        kernel = nothing,
         neighborhood = 7,
         h::Real = 1,
         selected_area = nothing,
-        skip_zero_offset::Bool = false,
     ) where {T, M}
     axes(value) == axes(precision) ||
         throw(DimensionMismatch("value and precision must have the same axes"))
@@ -35,6 +35,14 @@ function _nonlocalmeans!(
         throw(DimensionMismatch("output and value must have the same axes"))
     Base.require_one_based_indexing(output, value, precision)
     patch = _to_CartesianIndices(patch, Val(M - 1), "patch")
+    if kernel isa Function
+        kernel = OffsetArray(T.(kernel.(Tuple.(patch))), patch)
+    elseif kernel isa OffsetArray
+        CartesianIndices(kernel) == patch || throw(DimensionMismatch("kernel must have the same size as patch"))
+        kernel = T.(kernel)
+    elseif kernel !== nothing
+        throw(ArgumentError("kernel must be a function or an OffsetArray of matching size to patch"))
+    end
     neighborhood = _to_CartesianIndices(neighborhood, Val(M - 1), "neighborhood")
     if isnothing(selected_area)
         selected_area = CartesianIndices(ntuple(n -> axes(value, n + 1), M - 1))
@@ -56,10 +64,9 @@ function _nonlocalmeans!(
     source_precision = Base.mightalias(output, precision) ? copy(precision) : precision
 
     backend = KernelAbstractions.get_backend(value)
-    kernel! = _nlmeans_kernel!(backend)
-    kernel!(
+    _nlmeans_kernel!(backend)(
         output, source, source_precision, denominator, store_precision,
-        patch, neighborhood, selected_area, skip_zero_offset, T(h^2), Val(size(value, 1));
+        patch, kernel, neighborhood, selected_area, T(h^2), Val(size(value, 1));
         ndrange = size(value)[2:end],
     )
     KernelAbstractions.synchronize(backend)
@@ -68,17 +75,24 @@ function _nonlocalmeans!(
     return output, output_precision
 end
 
-@kernel function _nlmeans_kernel!(output, value::AbstractArray{T, M}, precision::AbstractArray{T, M}, output_precision, store_precision, patch::PT, neighborhood::NT, selected_area::ST, skip_zero_offset, h², ::Val{C}) where {C, T, M, PT, NT, ST}
+@kernel  function _nlmeans_kernel!(
+        output,
+        value::AbstractArray{T, M},
+        precision::AbstractArray{T, M},
+        output_precision,
+        store_precision,
+        patch::PT,
+        kernel::K,
+        neighborhood::NT,
+        selected_area::ST,
+        h²,
+        ::Val{C}
+    ) where {C, T, M, PT, NT, ST, K}
     index = @index(Global, Cartesian)
-    dims = size(value)[2:end]
-    nspatial = length(dims)
-    z = zero(T)
-    zero_offset = CartesianIndex(ntuple(_ -> 0, nspatial))
-
     channels = ntuple(identity, Val(C))
-    numerator = ntuple(_ -> z, Val(C))
-    denom = ntuple(_ -> z, Val(C))
-    squares = ntuple(_ -> z, Val(C))
+    numerator = ntuple(_ -> zero(T), Val(C))
+    denom = ntuple(_ -> zero(T), Val(C))
+    squares = ntuple(_ -> zero(T), Val(C))
 
     patch_CartesianIndices = (PT === CartesianIndices && ST === CartesianIndices)
     search_CartesianIndices = (NT === CartesianIndices && ST === CartesianIndices)
@@ -92,7 +106,6 @@ end
 
         patch_ranges = patch_CartesianIndices ? patch ∩ (selected_area .- index) ∩ (selected_area .- candidate) : patch
         for offset in patch_ranges
-            skip_zero_offset && offset == zero_offset && continue
 
             center_patch = index + offset
             patch_CartesianIndices || (center_patch ∉ selected_area && continue)
@@ -104,6 +117,7 @@ end
                 p2 = precision[c, candidate_patch]
                 p1p2 = p1 + p2
                 patch_weight = (p1p2 == 0 ? zero(p1p2) : (p1 * p2) / p1p2)
+                K === Nothing ||  (patch_weight *= kernel[offset])
                 difference = value[c, center_patch] - value[c, candidate_patch]
                 distance += difference^2 * patch_weight
                 distance_weight += patch_weight
