@@ -34,12 +34,12 @@ function _nonlocalmeans!(
     axes(output) == axes(value) ||
         throw(DimensionMismatch("output and value must have the same axes"))
     Base.require_one_based_indexing(output, value, precision)
-    
+
     backend = KernelAbstractions.get_backend(value)
 
     patch = _to_CartesianIndices(patch, Val(M - 1), "patch")
     if kernel isa Function
-        kernel = adapt(backend,OffsetArray(T.(kernel.(Tuple.(patch))), patch))
+        kernel = adapt(backend, OffsetArray(T.(kernel.(Tuple.(patch))), patch))
     elseif kernel isa OffsetArray
         CartesianIndices(kernel) == patch || throw(DimensionMismatch("kernel must have the same size as patch"))
         kernel = adapt(backend, T.(kernel))
