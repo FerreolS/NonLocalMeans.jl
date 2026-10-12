@@ -19,14 +19,14 @@ NonLocalMeansColorTypesExt = "ColorTypes"
 NonLocalMeansWeightedDataExt = ["WeightedData"]
 
 [compat]
-Adapt = "4.7.4"
+Adapt = "4"
 Aqua = "0.8"
 ColorTypes = "0.11, 0.12"
 ExplicitImports = "1"
 KernelAbstractions = "0.9"
-LinearAlgebra = "1.13.0"
-OffsetArrays = "1.17.0"
-StructuredArrays = "0.2.23"
+LinearAlgebra = "1"
+OffsetArrays = "1"
+StructuredArrays = "0.2"
 Test = "1"
 WeightedData = "0.3.5"
 julia = "1.10"
