@@ -1,14 +1,29 @@
 module NonLocalMeans
 
-export nonlocalmeans, nonlocalmeans!
-public skip_central_pixel_kernel, gaussian_kernel
-
 import StructuredArrays: FastUniformArray
 import KernelAbstractions
 using KernelAbstractions: @index, @kernel, @Const
 using OffsetArrays: OffsetArray
-using Adapt:adapt
+using Adapt: adapt
 using LinearAlgebra: norm
+
+
+export nonlocalmeans, nonlocalmeans!
+public skip_central_pixel_kernel, gaussian_kernel
+if VERSION >= v"1.11"
+    Core.eval(
+        @__MODULE__, Expr(
+            :public,
+            :skip_central_pixel_kernel,
+            :gaussian_kernel
+        )
+    )
+else
+    @eval begin
+        export skip_central_pixel_kernel,
+            gaussian_kernel
+    end
+end
 
 include("kernel.jl")
 """
