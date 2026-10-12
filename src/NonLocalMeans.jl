@@ -1,7 +1,6 @@
 module NonLocalMeans
 
 export nonlocalmeans, nonlocalmeans!
-public skip_central_pixel_kernel, gaussian_kernel
 
 import StructuredArrays: FastUniformArray
 import KernelAbstractions
