@@ -9,7 +9,6 @@ using LinearAlgebra: norm
 
 
 export nonlocalmeans, nonlocalmeans!
-public skip_central_pixel_kernel, gaussian_kernel
 if VERSION >= v"1.11"
     Core.eval(
         @__MODULE__, Expr(

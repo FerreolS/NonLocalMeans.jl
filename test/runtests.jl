@@ -181,4 +181,5 @@ end
     @test nonlocalmeans(value; patch = (3, 2), kernel = (_ -> 1.0)) ≈ nonlocalmeans(value; patch = (3, 2))
     @test nonlocalmeans(value; patch = (3, 2), kernel = NonLocalMeans.skip_central_pixel_kernel) ≈ NonLocalMeans.NLmeans_legacy(value; patch = CartesianIndex(3, 2), skip_zero_offset = true)
     @test nonlocalmeans(value; patch = 0, kernel = NonLocalMeans.gaussian_kernel) ≈ NonLocalMeans.NLmeans_legacy(value; patch = 0)
+    @test_throws ArgumentError nonlocalmeans(img; kernel = 1)
 end
