@@ -5,7 +5,7 @@ public skip_central_pixel_kernel, gaussian_kernel
 
 import StructuredArrays: FastUniformArray
 import KernelAbstractions
-using KernelAbstractions: @index, @kernel
+using KernelAbstractions: @index, @kernel, @Const
 using OffsetArrays: OffsetArray
 
 include("kernel.jl")

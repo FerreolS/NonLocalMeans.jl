@@ -77,8 +77,8 @@ end
 
 @kernel  function _nlmeans_kernel!(
         output,
-        value::AbstractArray{T, M},
-        precision::AbstractArray{T, M},
+        @Const(value::AbstractArray{T, M}),
+        @Const(precision::AbstractArray{T, M}),
         output_precision,
         store_precision,
         patch::PT,
