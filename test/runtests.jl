@@ -174,3 +174,10 @@ end
     @test nonlocalmeans(value; patch = (1, 2), neighborhood = 2) ≈ nonlocalmeans(value; patch = CartesianIndices((-1:1, -2:2)), neighborhood = 2)
     @test nonlocalmeans(value; patch = (1, 2), neighborhood = 2) ≈ NonLocalMeans.NLmeans_legacy(value; patch = CartesianIndex(1, 2), neighborhood = 2)
 end
+
+
+@testset "patch kernel" begin
+    value = rand(Float32, 9, 8)
+    @test nonlocalmeans(value; patch = (3, 2), kernel = (_ -> 1.0)) ≈ nonlocalmeans(value; patch = (3, 2))
+    @test nonlocalmeans(value; patch = (3, 2), kernel = NonLocalMeans.skip_central_pixel_kernel) ≈ NonLocalMeans.NLmeans_legacy(value; patch = CartesianIndex(3, 2), skip_zero_offset = true)
+end
