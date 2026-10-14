@@ -14,7 +14,6 @@ NonLocalMeans = {path = ".."}
 Aqua = "0.8"
 ColorTypes = "0.11, 0.12"
 ExplicitImports = "1"
-NonLocalMeans = "0.2"
 OffsetArrays = "1"
 Test = "1"
 WeightedData = "0.3.5"
