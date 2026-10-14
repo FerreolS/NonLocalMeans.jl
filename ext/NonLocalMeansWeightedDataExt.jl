@@ -5,7 +5,7 @@ import WeightedData: WeightedArray, get_value, get_precision
 
 function nonlocalmeans(value::WeightedArray; kwargs...)
     out, out_precision = nonlocalmeans(
-        get_value(value), get_precision(value); kwargs..., store_precision = true,
+        get_value(value), get_precision(value); kwargs...,
     )
     return WeightedArray(out, out_precision)
 end

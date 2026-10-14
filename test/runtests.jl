@@ -17,9 +17,9 @@ using Test
     @test sum(abs2, result .- clean) < sum(abs2, noisy .- clean)
 
     area = CartesianIndices(axes(noisy))
-    @test nonlocalmeans(noisy; patch = 1, neighborhood = 2, h = 0.4, selected_area = area) ≈ result
+    @test nonlocalmeans(noisy; patch = 1, neighborhood = 2, h = 0.4) ≈ result
     out = similar(noisy)
-    nonlocalmeans!(out, noisy; patch = 1, neighborhood = 2, h = 0.4, selected_area = area)
+    nonlocalmeans!(out, noisy; patch = 1, neighborhood = 2, h = 0.4)
     @test out ≈ result
 end
 
@@ -47,13 +47,13 @@ end
 @testset "in place and aliasing" begin
     value = rand(Float32, 5, 6)
     precision = rand(Float32, 5, 6) .+ 1
-    default_expected = nonlocalmeans(value, precision)
+    default_expected, default_precision = nonlocalmeans(value, precision)
     default_output = similar(value)
     nonlocalmeans!(default_output, value, precision)
     @test default_output ≈ default_expected
 
     kw = (patch = 1, neighborhood = 2, h = 4)
-    expected = nonlocalmeans(value, precision; kw...)
+    expected, _ = nonlocalmeans(value, precision; kw...)
 
     output = similar(value)
     @test nonlocalmeans!(output, value, precision; kw...) === output
@@ -79,8 +79,8 @@ end
     op = similar(value)
     a, ret = nonlocalmeans!(similar(value), value, precision, op; patch = 1, neighborhood = 2, h = 1)
     @test ret === op
-    @test a ≈ nonlocalmeans(value, precision; patch = 1, neighborhood = 2)
-    @test nonlocalmeans(value, precision; store_precision = true)[2] isa Matrix{Float32}
+    @test a ≈ nonlocalmeans(value, precision; patch = 1, neighborhood = 2)[1]
+    @test nonlocalmeans(value, precision)[2] isa Matrix{Float32}
     # equal weights: precisions add up over the search window
     nonlocalmeans!(similar(value), value, precision, op; patch = 0, neighborhood = 1, h = 1.0f12)
     @test op[5, 4] ≈ sum(precision[4:6, 3:5]) rtol = 1.0e-4
@@ -92,7 +92,7 @@ end
 
     default_value = reshape(Float32.(1:90) .^ 1.2f0, 3, 5, 6)
     default_precision = reshape(Float32.(1:90) ./ 90 .+ 1, 3, 5, 6)
-    default_expected = nonlocalmeans(default_value, default_precision; channel_dim = 1)
+    default_expected, _ = nonlocalmeans(default_value, default_precision; channel_dim = 1)
     default_output = similar(default_value)
     nonlocalmeans!(default_output, default_value, default_precision; channel_dim = 1)
     @test default_output ≈ default_expected
@@ -100,21 +100,21 @@ end
     kw = (patch = 1, neighborhood = 2, h = 0.5f0)
     value = rand(Float32, 3, 9, 8)
     precision = rand(Float32, 3, 9, 8) .+ 1
-    ref, refp = nonlocalmeans(value, precision; channel_dim = 1, store_precision = true, kw...)
+    ref, refp = nonlocalmeans(value, precision; channel_dim = 1, kw...)
 
     # one channel equals the plain function
     v = rand(Float32, 9, 8)
     q = rand(Float32, 9, 8) .+ 1
-    a, ap = nonlocalmeans(v, q; store_precision = true, kw...)
+    a, ap = nonlocalmeans(v, q; kw...)
     b, bp = nonlocalmeans(
         reshape(v, 1, 9, 8), reshape(q, 1, 9, 8);
-        channel_dim = 1, store_precision = true, kw...,
+        channel_dim = 1, kw...,
     )
     @test b[1, :, :] ≈ a && bp[1, :, :] ≈ ap
 
     z = permutedims(value, (2, 1, 3))
     Pz = permutedims(precision, (2, 1, 3))
-    o, op = nonlocalmeans(z, Pz; channel_dim = 2, store_precision = true, kw...)
+    o, op = nonlocalmeans(z, Pz; channel_dim = 2, kw...)
     @test o ≈ permutedims(ref, (2, 1, 3))
     @test op ≈ permutedims(refp, (2, 1, 3))
 
@@ -144,7 +144,7 @@ end
     value = rand(8, 9)
     precision = rand(8, 9) .+ 1
     kw = (patch = 1, neighborhood = 2, h = 1.0)
-    expected, expected_precision = nonlocalmeans(value, precision; kw..., store_precision = true)
+    expected, expected_precision = nonlocalmeans(value, precision; kw...)
 
     w = nonlocalmeans(WeightedArray(value, precision); kw...)
     @test w isa WeightedArray
@@ -185,6 +185,6 @@ end
     @test_throws ArgumentError nonlocalmeans(value; kernel = 1)
 
     patch = NonLocalMeans._to_CartesianIndices(2, Val(2), "patch")
-    kernel = OffsetArray(ones(size(patch)),patch)
+    kernel = OffsetArray(ones(size(patch)), patch)
     @test nonlocalmeans(value; patch = patch, kernel = kernel) ≈ NonLocalMeans.NLmeans_legacy(value; patch = CartesianIndex(2, 2))
 end
