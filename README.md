@@ -25,11 +25,12 @@ nonlocalmeans!(output, img)
 - `channel_dim = nothing` specifies the channel axis for joint channel
  denoising. Patches and search windows span the remaining dimensions.
 
-`patch` and `neighborhood` accept:
+There are different ways to define pixels neighborhood and `patch` and `neighborhood` accept:
 
-- An `Int` (non negative) radius, applied in every spatial dimension.
+- An `Int` (non negative) radius, consider a squared neigbohood of width 2xradius+1 in every spatial dimension.
 - An `NTuple{N,Int}` or `CartesianIndex{N}` radius, with one radius per spatial dimension. For example, `patch = (1, 1, 0)` uses a 3-by-3 patch in  the first two dimensions and no extent in the third.
-- `CartesianIndices` or an array of `CartesianIndex` offsets to specify a custom patch or search window.
+- `CartesianIndices`  for custom but regular neighborhood as `CartesianIndices((-4:2:4, 0:3))`
+- an array of `CartesianIndex` offsets to specify a custom patch or search window. This may end-up in degraded performance (~1.5 in speed).
 
 ## Uncertainties estimates
 
