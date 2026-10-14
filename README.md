@@ -2,44 +2,62 @@
 
 [![Build Status][github-ci-img]][github-ci-url] [![Coverage][codecov-img]][codecov-url] [![Aqua QA][aqua-img]][aqua-url] [![Docs][docs-img]][docs-url]
 
-`NonLocalMeans.jl` is a Julia package for non-local means denoising of
-real-valued arrays of any dimensionality, implemented with
-[KernelAbstractions.jl](https://github.com/JuliaGPU/KernelAbstractions.jl).
+This `NonLocalMeans.jl` package implements the (pixel-wise) non-local means denoising algorithm proposed in Buades (2008)[^1]. In this algorithm, each sample is replaced by a weighted average of the samples in its search neighborhood. The package exports only the function `nonlocalmeans`  and its  in-place counter part `nonlocalmeans!`.  It can operate on any array of any dimension and is almost allocations free (few kB). Thanks to [KernelAbstractions.jl](https://github.com/JuliaGPU/KernelAbstractions.jl) it can be runned on  CPU and GPUs backends.
 
 ```julia
-using NonLocalMeans
-
-img = randn(Float32, 64, 64)
-
-denoised = nonlocalmeans(img; patch = 2, neighborhood = 7, h = 1)
-nonlocalmeans!(output, img; patch = 2, neighborhood = 7, h = 1)
+using NonLocalMeans, TestImages
+img = Float64.(testimage("cameraman"))*255 + 5 .* randn(Float64,512,512)
+denoised = nonlocalmeans(img)
+output = similar(img)
+nonlocalmeans!(output, img)
 ```
 
-Each sample is replaced by a weighted average of the samples in its search
-neighborhood. `precision` is optional and defaults to a uniform array. The
-functions return `output` unless `store_precision = true` (or an
-`output_precision` array is supplied to the in-place variant), in which case they
-return `(output, output_precision)`. The weights are `exp(-patch_distance / h)`,
-where the patch distance is the precision-weighted mean squared difference
-between patches.
+`nonlocalmeans!` writes into `output`; if `output` aliases an input, that input is copied before the kernel is launched.
 
-- `patch` is a nonnegative integer radius. A tuple or `CartesianIndex` can
-  specify a different radius in each dimension.
-- `neighborhood` defines the search window: a radius (same forms as `patch`) or
-a `CartesianIndices` of offsets, e.g. `CartesianIndices((-2:2, 0:3))` for an
-asymmetric window.
-- `h` controls the weight decay.
-- `selected_area` limits denoising to a subset of spatial coordinates, e.g. a
-  `CartesianIndices` slice or an array of `CartesianIndex`s.
+## Keywords
 
-`nonlocalmeans!` writes into `output`; if `output` aliases an input, that input is
-copied before the kernel is launched. Inputs must use one-based indexing. Set
-`channel_dim` to the channel axis to denoise channels jointly; patches and search
-windows span the remaining dimensions.
+- `h = 1` controls the weight decay in patch weight computation:
+  `exp(-patch_distance / h^2)`.
+- `patch = 2` controls the size of the patch.
+- `kernel = nothing` optionally supplies spatial weights within each patch; the default uses uniform weights. It can be a function of an offset `NTuple` or an `OffsetArray` whose axes match the patch offsets. The `NonLocalMeans.gaussian_kernel` and `NonLocalMeans.skip_central_pixel_kernel` functions provide Gaussian weighting and center-pixel exclusion, respectively.
+- `neighborhood` controls the size of the search window. It accepts the same
+ radius forms as `patch`.
+- `channel_dim = nothing` specifies the channel axis for joint channel
+ denoising. Patches and search windows span the remaining dimensions.
 
-Colorant arrays are supported through the optional ColorTypes extension.
-WeightedArray values from WeightedData can be passed directly; their precision is
-used for denoising and returned with the result.
+`patch` and `neighborhood` accept:
+
+- An `Int` (non negative) radius, applied in every spatial dimension.
+- An `NTuple{N,Int}` or `CartesianIndex{N}` radius, with one radius per spatial dimension. For example, `patch = (1, 1, 0)` uses a 3-by-3 patch in  the first two dimensions and no extent in the third.
+- `CartesianIndices` or an array of `CartesianIndex` offsets to specify a custom patch or search window.
+
+## Uncertainties estimates
+
+Each sample can be associated with a precision (inverse variance). When a precision array is supplied, `nonlocalmeans` can also return the estimated precision of the denoised array.
+
+```julia
+denoised, denoised_precision = nonlocalmeans(img, precision)
+nonlocalmeans!(denoised, img, precision, denoised_precision)
+```
+
+The computed precision is an approximation derived from the weighted average of the samples; it does not propagate uncertainty from the estimation of the weights. Precision values are also useful for excluding unmeasured or erroneous pixels by setting their precision to zero.
+
+## Extensions
+
+### ColorTypes
+
+Colorant arrays are supported through the optional [ColorTypes](https://github.com/JuliaGraphics/ColorTypes.jl) extension. Color channels are processed jointly using color patches.
+
+```julia
+using NonLocalMeans, ImageInTerminal, TestImages
+img = testimage("mandril_color")
+data = img .+ 0.5 .* rand(eltype(img), size(img))
+nonlocalmeans(data; h = 0.1)
+```
+
+### WeightedData
+
+When [WeightedData](https://github.com/FerreolS/WeightedData.jl) is loaded, `WeightedArray` values can be passed directly; their precision is used for denoising and returned with the result.
 
 [github-ci-img]: https://github.com/FerreolS/NonLocalMeans.jl/actions/workflows/CI.yml/badge.svg?branch=master
 [github-ci-url]: https://github.com/FerreolS/NonLocalMeans.jl/actions/workflows/CI.yml?query=branch%3Amaster
@@ -49,3 +67,5 @@ used for denoising and returned with the result.
 [aqua-url]: https://github.com/JuliaTesting/Aqua.jl
 [docs-img]: https://img.shields.io/badge/docs-dev-blue.svg
 [docs-url]: https://ferreols.github.io/NonLocalMeans.jl/dev/
+
+[^1]: A. Buades, B. Coll and J. . -M. Morel, "A non-local algorithm for image denoising," 2005 IEEE Computer Society Conference on Computer Vision and Pattern Recognition (CVPR'05), San Diego, CA, USA, 2005, pp. 60-65 vol. 2, [doi](https://doi.org/10.1109/CVPR.2005.38)

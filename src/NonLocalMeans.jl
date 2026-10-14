@@ -26,13 +26,8 @@ end
 
 include("kernel.jl")
 """
-    nonlocalmeans(value[, precision = nothing]; 
-                    patch = 2,
-                    neighborhood = 7, 
-                    h = 1,
-                    kernel = nothing,
-                    channel_dim = nothing,
-                    )
+    nonlocalmeans(value[, precision]; patch = 2, neighborhood = 7, h = 1,
+                  kernel = nothing, channel_dim = nothing)
 
 Apply non-local means denoising to an `N`-dimensional real-valued array using
 `KernelAbstractions.jl`.
@@ -50,11 +45,10 @@ patch offsets. The function is evaluated at each patch offset. `nothing`
 [`skip_central_pixel_kernel`](@ref) are provided as useful functions.
 
 If `precision` is supplied, it weights patch comparisons and the output
-averages. If it is omitted, unit precision is used. `store_precision = true`
-returns `(output, output_precision)`, where `output_precision` is the estimated
-precision of each output sample; otherwise only `output` is returned. The
-comparison weight is `exp(-patch_distance / h^2)`, where `patch_distance` is the
-precision- and kernel-weighted mean squared difference between patches.
+averages, and the function returns `(output, output_precision)`. If it is
+omitted, unit precision is used and only `output` is returned. The comparison
+weight is `exp(-patch_distance / h^2)`, where `patch_distance` is the precision-
+and kernel-weighted mean squared difference between patches.
 
 Inputs must use one-based indexing. If `channel_dim` is an integer, that
 dimension is treated as the channel axis and channels are denoised jointly using
@@ -88,22 +82,17 @@ end
 
 """
     nonlocalmeans!(output, value[, precision[, output_precision]];
-                patch = 2, 
-                neighborhood = 7, 
-                h = 1, 
-                kernel = nothing,
-                channel_dim = nothing,
-                )
+                  patch = 2, neighborhood = 7, h = 1, kernel = nothing,
+                  channel_dim = nothing)
 
 In-place version of [`nonlocalmeans`](@ref). Inputs aliasing `output` are copied
 first.
 
-keywords have the same meanings as in
-[`nonlocalmeans`](@ref). When `output_precision` is supplied as the fourth
-positional argument, it is filled with the estimated precision of each output
-sample, `(Σ pⱼwⱼ)² / Σ pⱼwⱼ²`, treating the weights as fixed. The return value is
-`output` unless `output_precision` is supplied, in which case it is
-`(output, output_precision)`.
+The keywords have the same meanings as in [`nonlocalmeans`](@ref). If
+`output_precision` is supplied as the fourth positional argument, it is filled
+with the estimated precision of each output sample,
+`(Σ pⱼwⱼ)² / Σ pⱼwⱼ²`, treating the weights as fixed, and the function returns
+`(output, output_precision)`. Otherwise, it returns `output`.
 
 `channel_dim` has the same meaning as in [`nonlocalmeans`](@ref).
 """
